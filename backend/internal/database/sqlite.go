@@ -1,5 +1,5 @@
 // Package database 提供数据库连接管理
-// 使用 GORM + SQLite
+// 使用 GORM + 纯 Go SQLite (支持 Windows/Linux/Mac 无需 GCC)
 package database
 
 import (
@@ -9,7 +9,7 @@ import (
 	"claw/internal/config"
 	"claw/internal/logger"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite" // 纯 Go SQLite 实现，无需 CGO
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )

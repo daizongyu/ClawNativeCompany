@@ -25,6 +25,14 @@ build-linux:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o $(BUILD_DIR)/$(BINARY_NAME)-linux $(MAIN_FILE)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)-linux"
 
+# 构建 Windows 二进制（无需 GCC）
+build-windows:
+	@echo "Building $(BINARY_NAME) for Windows (CGO-free)..."
+	@mkdir -p $(BUILD_DIR)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -a -installsuffix cgo -o $(BUILD_DIR)/$(BINARY_NAME).exe $(MAIN_FILE)
+	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME).exe"
+	@echo "Windows users can run directly without GCC!"
+
 # 运行测试
 test:
 	@echo "Running tests..."

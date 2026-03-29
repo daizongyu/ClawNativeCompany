@@ -10,10 +10,20 @@ all: build
 build: build-backend build-frontend
 	@echo "✅ Build completed"
 
-# 构建后端
+# 构建后端（本地）
 build-backend:
 	@echo "🔨 Building backend..."
+	cd backend && $(MAKE) build
+
+# 构建后端（Linux）
+build-backend-linux:
+	@echo "🔨 Building backend for Linux..."
 	cd backend && $(MAKE) build-linux
+
+# 构建后端（Windows，无需 GCC）
+build-backend-windows:
+	@echo "🔨 Building backend for Windows (CGO-free)..."
+	cd backend && $(MAKE) build-windows
 
 # 构建前端
 build-frontend:
