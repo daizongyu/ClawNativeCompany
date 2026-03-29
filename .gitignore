@@ -7,8 +7,10 @@
 *.test
 *.out
 vendor/
+backend/bin/
 backend/data/
 backend/tmp/
+backend/main
 
 # Node
 node_modules/
