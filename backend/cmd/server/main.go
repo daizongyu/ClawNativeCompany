@@ -81,6 +81,10 @@ func main() {
 	employeeHandler := handler.NewEmployeeHandler()
 	channelHandler := handler.NewChannelHandler()
 	messageHandler := handler.NewMessageHandler()
+	workflowHandler := handler.NewWorkflowHandler()
+	taskHandler := handler.NewTaskHandler()
+	agentHandler := handler.NewAgentHandler()
+	webhookHandler := handler.NewWebhookHandler()
 	wsManager := websocket.GetManager()
 
 	// 创建 Gin 引擎
@@ -112,8 +116,24 @@ func main() {
 
 			// 消息路由
 			messageHandler.RegisterRoutes(protected)
+
+			// 工作流路由
+			workflowHandler.RegisterRoutes(protected)
+
+			// 任务路由
+			taskHandler.RegisterRoutes(protected)
+		}
+
+		// Agent 路由（使用 API Key 认证）
+		agentRoutes := api.Group("")
+		agentRoutes.Use(middleware.APIKeyAuth())
+		{
+			agentHandler.RegisterRoutes(agentRoutes)
 		}
 	}
+
+	// Webhook 路由（无需认证）
+	webhookHandler.RegisterRoutes(r.Group(""))
 
 	// WebSocket 路由（需要认证）
 	r.GET("/ws", middleware.DualAuth(), wsManager.HandleWebSocket)

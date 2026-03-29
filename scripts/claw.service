@@ -1,0 +1,17 @@
+[Unit]
+Description=Claw Native Company - Intelligent Collaboration Platform
+Documentation=https://github.com/your-org/claw-native-company
+Requires=docker.service
+After=docker.service network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/apps/claw-native-company
+ExecStart=/usr/local/bin/docker-compose up -d
+ExecStop=/usr/local/bin/docker-compose down
+ExecReload=/usr/local/bin/docker-compose restart
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

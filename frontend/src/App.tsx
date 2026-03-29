@@ -1,0 +1,91 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import { useAuthStore } from './stores/auth';
+import MainLayout from './components/layout/MainLayout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Employees from './pages/Employees';
+import Channels from './pages/Channels';
+import ChannelChat from './pages/ChannelChat';
+import Tasks from './pages/Tasks';
+import Workflows from './pages/Workflows';
+
+// 受保护的路由组件
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated } = useAuthStore();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+// 带布局的路由包装器
+const LayoutRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => {
+  return (
+    <MainLayout>
+      {element}
+    </MainLayout>
+  );
+};
+
+// 应用主组件
+const App: React.FC = () => {
+  return (
+    <ConfigProvider locale={zhCN}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<Dashboard />} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<Employees />} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/channels"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<Channels />} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/channels/:id"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<ChannelChat />} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<Tasks />} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/workflows"
+            element={
+              <ProtectedRoute>
+                <LayoutRoute element={<Workflows />} />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ConfigProvider>
+  );
+};
+
+export default App;
