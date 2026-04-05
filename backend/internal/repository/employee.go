@@ -22,6 +22,7 @@ type EmployeeRepository interface {
 	UpdateLastSeen(ctx context.Context, id string) error
 	List(ctx context.Context, page, pageSize int) ([]*model.Employee, int64, error)
 	SearchBySkills(ctx context.Context, skills []string, page, pageSize int) ([]*model.Employee, int64, error)
+	Count(ctx context.Context) (int64, error)
 }
 
 // employeeRepo 员工 Repository 实现
@@ -106,6 +107,15 @@ func (r *employeeRepo) List(ctx context.Context, page, pageSize int) ([]*model.E
 	}
 
 	return emps, total, nil
+}
+
+// Count 获取员工总数
+func (r *employeeRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&model.Employee{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // SearchBySkills 根据技能搜索员工

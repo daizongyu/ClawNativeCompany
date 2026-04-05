@@ -4,11 +4,12 @@ package websocket
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
+	"claw/internal/jwt"
 	"claw/internal/logger"
-	"claw/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -194,13 +195,29 @@ func (m *Manager) IsOnline(userID string) bool {
 
 // HandleWebSocket 处理 WebSocket 连接
 func (m *Manager) HandleWebSocket(c *gin.Context) {
-	// 从上下文获取用户 ID
-	userID, exists := c.Get(string(middleware.ContextKeyEmployeeID))
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "未登录"})
+	// 从 URL 参数获取 token
+	token := c.Query("token")
+	if token == "" {
+		// 尝试从 Authorization header 获取
+		authHeader := c.GetHeader("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+	}
+
+	if token == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "未提供 token"})
 		return
 	}
-	userIDStr := userID.(string)
+
+	// 验证 token
+	claims, err := jwt.ParseToken(token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "无效的 token"})
+		return
+	}
+
+	userIDStr := claims.EmployeeID
 
 	// 升级连接
 	conn, err := Upgrader.Upgrade(c.Writer, c.Request, nil)

@@ -4,8 +4,8 @@ interface LoginResponse {
   code: number;
   message: string;
   data: {
-    token: string;
-    user: {
+    access_token: string;
+    employee: {
       id: string;
       name: string;
       email: string;

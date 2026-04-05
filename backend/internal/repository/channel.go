@@ -37,6 +37,9 @@ type ChannelRepository interface {
 	GetMember(ctx context.Context, channelID, employeeID string) (*model.ChannelMember, error)
 	ListMembers(ctx context.Context, channelID string) ([]*model.ChannelMember, error)
 
+	// 统计
+	Count(ctx context.Context) (int64, error)
+
 	// 权限检查
 	CheckPermission(ctx context.Context, channelID, employeeID string, minRole model.ChannelRole) (bool, error)
 }
@@ -227,4 +230,13 @@ func (r *channelRepo) CheckPermission(ctx context.Context, channelID, employeeID
 	requiredLevel := roleLevels[minRole]
 
 	return userLevel >= requiredLevel, nil
+}
+
+// Count 获取频道总数
+func (r *channelRepo) Count(ctx context.Context) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&model.Channel{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
 }

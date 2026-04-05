@@ -11,6 +11,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// WorkflowStats 工作流统计
+type WorkflowStats struct {
+	Active         int64
+	Running      int64
+	Paused       int64
+	Failed       int64
+	TotalExecutions int64
+}
+
+
 // WorkflowRepository 工作流 Repository 接口
 type WorkflowRepository interface {
 	Create(ctx context.Context, workflow *model.Workflow) error
@@ -20,6 +30,7 @@ type WorkflowRepository interface {
 	List(ctx context.Context, page, pageSize int) ([]*model.Workflow, int64, error)
 	ListByStatus(ctx context.Context, status model.WorkflowStatus, page, pageSize int) ([]*model.Workflow, int64, error)
 	SearchByName(ctx context.Context, keyword string, page, pageSize int) ([]*model.Workflow, int64, error)
+	GetStats(ctx context.Context) (*WorkflowStats, error)
 }
 
 // WorkflowExecutionRepository 工作流执行 Repository 接口
@@ -197,4 +208,31 @@ func (r *workflowExecutionRepo) ListActive(ctx context.Context, page, pageSize i
 	}
 
 	return executions, total, nil
+}
+
+// GetStats 获取工作流统计
+func (r *workflowRepo) GetStats(ctx context.Context) (*WorkflowStats, error) {
+	stats := &WorkflowStats{}
+
+	// 活跃工作流数 (status = active)
+	if err := r.db.WithContext(ctx).Model(&model.Workflow{}).Where("status = ?", model.WorkflowStatusActive).Count(&stats.Active).Error; err != nil {
+		return nil, err
+	}
+
+	// 运行中的执行数 (从 executions 表统计)
+	if err := r.db.WithContext(ctx).Model(&model.WorkflowExecution{}).Where("status = ?", model.ExecutionStatusRunning).Count(&stats.Running).Error; err != nil {
+		return nil, err
+	}
+
+	// 失败的执行数 (从 executions 表统计)
+	if err := r.db.WithContext(ctx).Model(&model.WorkflowExecution{}).Where("status = ?", model.ExecutionStatusFailed).Count(&stats.Failed).Error; err != nil {
+		return nil, err
+	}
+
+	// 总执行次数
+	if err := r.db.WithContext(ctx).Model(&model.WorkflowExecution{}).Count(&stats.TotalExecutions).Error; err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }

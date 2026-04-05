@@ -253,12 +253,43 @@ func (h *EmployeeHandler) ResetAPIKey(c *gin.Context) {
 	h.GenerateAPIKey(c)
 }
 
+// GetMe 获取当前登录员工信息
+// GET /api/v1/employees/me
+func (h *EmployeeHandler) GetMe(c *gin.Context) {
+	// 从上下文中获取当前用户 ID
+	employeeID, exists := c.Get(string(middleware.ContextKeyEmployeeID))
+	if !exists {
+		utils.Error(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+
+	id, ok := employeeID.(string)
+	if !ok || id == "" {
+		utils.Error(c, http.StatusUnauthorized, "无效的用户信息")
+		return
+	}
+
+	resp, err := h.employeeService.GetByID(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case service.ErrEmployeeNotFound:
+			utils.Error(c, http.StatusNotFound, "员工不存在")
+		default:
+			utils.Error(c, http.StatusInternalServerError, "获取员工信息失败")
+		}
+		return
+	}
+
+	utils.SuccessWithData(c, resp)
+}
+
 // RegisterRoutes 注册路由
 func (h *EmployeeHandler) RegisterRoutes(r *gin.RouterGroup) {
 	employees := r.Group("/employees")
 	{
 		employees.POST("", h.Create)
 		employees.GET("", h.List)
+		employees.GET("/me", h.GetMe)
 		employees.GET("/search", h.SearchBySkills)
 		employees.GET("/:id", h.Get)
 		employees.PUT("/:id", h.Update)

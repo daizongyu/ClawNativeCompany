@@ -57,6 +57,28 @@ func (h *WorkflowHandler) Create(c *gin.Context) {
 	utils.SuccessWithData(c, resp)
 }
 
+// List 获取工作流列表
+// GET /api/v1/workflows
+func (h *WorkflowHandler) List(c *gin.Context) {
+	page := utils.GetIntQuery(c, "page", 1)
+	pageSize := utils.GetIntQuery(c, "page_size", 20)
+	status := c.Query("status")
+
+	req := service.ListWorkflowRequest{
+		Page:     page,
+		PageSize: pageSize,
+		Status:   status,
+	}
+
+	resp, err := h.workflowService.List(c.Request.Context(), req)
+	if err != nil {
+		utils.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SuccessWithData(c, resp)
+}
+
 // Get 获取工作流详情
 // GET /api/v1/workflows/:id
 func (h *WorkflowHandler) Get(c *gin.Context) {
@@ -134,33 +156,6 @@ func (h *WorkflowHandler) Delete(c *gin.Context) {
 	}
 
 	utils.SuccessWithData(c, gin.H{"message": "删除成功"})
-}
-
-// List 获取工作流列表
-// GET /api/v1/workflows
-func (h *WorkflowHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	resp, total, err := h.workflowService.List(c.Request.Context(), page, pageSize)
-	if err != nil {
-		utils.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	utils.SuccessWithData(c, gin.H{
-		"list":      resp,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
 }
 
 // Search 搜索工作流

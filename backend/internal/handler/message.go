@@ -72,6 +72,36 @@ func (h *MessageHandler) Send(c *gin.Context) {
 	utils.SuccessWithData(c, resp)
 }
 
+// ListAll 获取所有消息列表
+// GET /api/v1/messages
+func (h *MessageHandler) ListAll(c *gin.Context) {
+	channelID := c.Query("channel_id")
+	if channelID == "" {
+		utils.ValidationError(c, "频道 ID 不能为空")
+		return
+	}
+
+	limit := utils.GetIntQuery(c, "limit", 50)
+
+	req := &service.ListMessageRequest{
+		ChannelID: channelID,
+		Limit:     limit,
+	}
+
+	resp, err := h.messageService.List(c.Request.Context(), req)
+	if err != nil {
+		switch err {
+		case service.ErrChannelNotFound:
+			utils.Error(c, http.StatusNotFound, "频道不存在")
+		default:
+			utils.Error(c, http.StatusInternalServerError, "获取消息列表失败")
+		}
+		return
+	}
+
+	utils.SuccessWithData(c, resp)
+}
+
 // Get 获取消息详情
 // GET /api/v1/messages/:id
 func (h *MessageHandler) Get(c *gin.Context) {
@@ -295,6 +325,7 @@ func (h *MessageHandler) RegisterRoutes(r *gin.RouterGroup) {
 	// 消息相关路由
 	messages := r.Group("/messages")
 	{
+		messages.GET("", h.ListAll)
 		messages.POST("", h.Send)
 		messages.GET("/:id", h.Get)
 		messages.PUT("/:id", h.Update)

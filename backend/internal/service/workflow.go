@@ -10,6 +10,7 @@ import (
 	"claw/internal/repository"
 	"claw/internal/workflow"
 	"claw/internal/workflow/expression"
+	"claw/pkg/utils"
 )
 
 // 工作流服务错误
@@ -68,6 +69,19 @@ type UpdateWorkflowRequest struct {
 	Steps         model.WorkflowSteps `json:"steps" validate:"omitempty,min=1"`
 }
 
+// ListWorkflowRequest 工作流列表请求
+type ListWorkflowRequest struct {
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+	Status   string `json:"status,omitempty"`
+}
+
+// ListWorkflowResponse 工作流列表响应
+type ListWorkflowResponse struct {
+	List       []*WorkflowResponse `json:"list"`
+	Pagination utils.Pagination    `json:"pagination"`
+}
+
 // WorkflowResponse 工作流响应
 type WorkflowResponse struct {
 	ID            string          `json:"id"`
@@ -99,6 +113,40 @@ func (s *WorkflowService) Create(ctx context.Context, req CreateWorkflowRequest,
 	}
 
 	return s.toWorkflowResponse(wf), nil
+}
+
+// List 获取工作流列表
+func (s *WorkflowService) List(ctx context.Context, req ListWorkflowRequest) (*ListWorkflowResponse, error) {
+	var workflows []*model.Workflow
+	var total int64
+	var err error
+
+	if req.Status != "" {
+		status := model.WorkflowStatus(req.Status)
+		workflows, total, err = s.workflowRepo.ListByStatus(ctx, status, req.Page, req.PageSize)
+	} else {
+		workflows, total, err = s.workflowRepo.List(ctx, req.Page, req.PageSize)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]*WorkflowResponse, len(workflows))
+	for i, wf := range workflows {
+		responses[i] = s.toWorkflowResponse(wf)
+	}
+
+	totalPage := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
+	return &ListWorkflowResponse{
+		List: responses,
+		Pagination: utils.Pagination{
+			Page:      req.Page,
+			PageSize:  req.PageSize,
+			Total:     total,
+			TotalPage: totalPage,
+		},
+	}, nil
 }
 
 // GetByID 根据 ID 获取工作流
@@ -156,20 +204,6 @@ func (s *WorkflowService) Delete(ctx context.Context, id string) error {
 		return err
 	}
 	return s.workflowRepo.Delete(ctx, id)
-}
-
-// List 获取工作流列表
-func (s *WorkflowService) List(ctx context.Context, page, pageSize int) ([]*WorkflowResponse, int64, error) {
-	workflows, total, err := s.workflowRepo.List(ctx, page, pageSize)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	responses := make([]*WorkflowResponse, len(workflows))
-	for i, w := range workflows {
-		responses[i] = s.toWorkflowResponse(w)
-	}
-	return responses, total, nil
 }
 
 // Search 搜索工作流

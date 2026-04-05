@@ -11,6 +11,7 @@ backend/bin/
 backend/data/
 backend/tmp/
 backend/main
+backend/claw-server
 
 # Node
 node_modules/
@@ -55,3 +56,6 @@ design/
 docs/
 prd/
 READY_FOR_DEV.md
+
+# Test
+tests/

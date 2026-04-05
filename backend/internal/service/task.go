@@ -11,6 +11,7 @@ import (
 	"claw/internal/model"
 	"claw/internal/repository"
 	"claw/internal/websocket"
+	"claw/pkg/utils"
 )
 
 // 任务服务错误
@@ -57,6 +58,14 @@ type UpdateTaskRequest struct {
 	Description string   `json:"description" validate:"max:2000"`
 	Priority  string   `json:"priority" validate:"omitempty,oneof=low medium high urgent"`
 	DueDate   *string  `json:"due_date,omitempty"`
+}
+
+// ListTaskRequest 任务列表请求
+type ListTaskRequest struct {
+	Page     int    `json:"page" validate:"min=1"`
+	PageSize int    `json:"page_size" validate:"min=1,max=100"`
+	Status   string `json:"status,omitempty"`
+	Priority string `json:"priority,omitempty"`
 }
 
 // TaskResponse 任务响应（使用 model.TaskResponse）
@@ -175,11 +184,17 @@ func (s *TaskService) Delete(ctx context.Context, id string) error {
 	return s.taskRepo.Delete(ctx, id)
 }
 
+// ListTaskResponse 任务列表响应
+type ListTaskResponse struct {
+	List       []*model.TaskResponse `json:"list"`
+	Pagination utils.Pagination      `json:"pagination"`
+}
+
 // List 获取任务列表
-func (s *TaskService) List(ctx context.Context, page, pageSize int) ([]*model.TaskResponse, int64, error) {
-	tasks, total, err := s.taskRepo.List(ctx, page, pageSize)
+func (s *TaskService) List(ctx context.Context, req ListTaskRequest) (*ListTaskResponse, error) {
+	tasks, total, err := s.taskRepo.List(ctx, req.Page, req.PageSize)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 
 	responses := make([]*model.TaskResponse, len(tasks))
@@ -187,7 +202,16 @@ func (s *TaskService) List(ctx context.Context, page, pageSize int) ([]*model.Ta
 		responses[i] = s.toTaskResponse(ctx, t)
 	}
 
-	return responses, total, nil
+	totalPage := int((total + int64(req.PageSize) - 1) / int64(req.PageSize))
+	return &ListTaskResponse{
+		List: responses,
+		Pagination: utils.Pagination{
+			Page:      req.Page,
+			PageSize:  req.PageSize,
+			Total:     total,
+			TotalPage: totalPage,
+		},
+	}, nil
 }
 
 // ListByAssignee 获取指派给某员工的任务

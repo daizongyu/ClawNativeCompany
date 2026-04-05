@@ -24,7 +24,9 @@ const Channels: React.FC = () => {
     try {
       const res = await channelApi.myChannels();
       if (res.code === 0) {
-        setChannels(res.data || []);
+        // 后端返回分页格式 { list, total, page, page_size, total_page }
+        const data = res.data?.list || res.data || [];
+        setChannels(data);
       }
     } finally {
       setLoading(false);

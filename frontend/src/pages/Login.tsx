@@ -15,8 +15,8 @@ const Login: React.FC = () => {
     try {
       const res = await authApi.login(values.email, values.password);
       if (res.code === 0) {
-        setToken(res.data.token);
-        setUser(res.data.user);
+        setToken(res.data.access_token);
+        setUser(res.data.employee);
         message.success('登录成功');
         navigate('/');
       } else {

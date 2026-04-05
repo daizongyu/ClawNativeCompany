@@ -15,6 +15,8 @@ import (
 	"claw/internal/handler"
 	"claw/internal/logger"
 	"claw/internal/middleware"
+	"claw/internal/repository"
+	"claw/internal/service"
 	"claw/internal/websocket"
 	"claw/migrations"
 	"claw/pkg/utils"
@@ -76,6 +78,15 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// 创建 Repository 实例
+	employeeRepo := repository.NewEmployeeRepository()
+	taskRepo := repository.NewTaskRepository()
+	channelRepo := repository.NewChannelRepository()
+	workflowRepo := repository.NewWorkflowRepository()
+
+	// 创建 Service 实例
+	dashboardService := service.NewDashboardService(employeeRepo, taskRepo, channelRepo, workflowRepo)
+
 	// 创建 Handler 实例
 	authHandler := handler.NewAuthHandler()
 	employeeHandler := handler.NewEmployeeHandler()
@@ -85,6 +96,7 @@ func main() {
 	taskHandler := handler.NewTaskHandler()
 	agentHandler := handler.NewAgentHandler()
 	webhookHandler := handler.NewWebhookHandler()
+	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	wsManager := websocket.GetManager()
 
 	// 创建 Gin 引擎
@@ -122,6 +134,9 @@ func main() {
 
 			// 任务路由
 			taskHandler.RegisterRoutes(protected)
+
+			// Dashboard 路由
+			protected.GET("/dashboard/stats", dashboardHandler.GetStats)
 		}
 
 		// Agent 路由（使用 API Key 认证）
@@ -135,8 +150,8 @@ func main() {
 	// Webhook 路由（无需认证）
 	webhookHandler.RegisterRoutes(r.Group(""))
 
-	// WebSocket 路由（需要认证）
-	r.GET("/ws", middleware.DualAuth(), wsManager.HandleWebSocket)
+	// WebSocket 路由（认证在 Handler 内部处理）
+	r.GET("/ws", wsManager.HandleWebSocket)
 
 	// 404 处理
 	r.NoRoute(func(c *gin.Context) {

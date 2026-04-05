@@ -82,6 +82,31 @@ func (h *TaskHandler) Get(c *gin.Context) {
 	utils.SuccessWithData(c, resp)
 }
 
+// List 获取任务列表
+// GET /api/v1/tasks
+func (h *TaskHandler) List(c *gin.Context) {
+	// 获取查询参数
+	page := utils.GetIntQuery(c, "page", 1)
+	pageSize := utils.GetIntQuery(c, "page_size", 20)
+	status := c.Query("status")
+	priority := c.Query("priority")
+
+	req := service.ListTaskRequest{
+		Page:     page,
+		PageSize: pageSize,
+		Status:   status,
+		Priority: priority,
+	}
+
+	resp, err := h.taskService.List(c.Request.Context(), req)
+	if err != nil {
+		utils.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	utils.SuccessWithData(c, resp)
+}
+
 // Update 更新任务
 // PUT /api/v1/tasks/:id
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -138,33 +163,6 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	}
 
 	utils.SuccessWithData(c, gin.H{"message": "删除成功"})
-}
-
-// List 获取任务列表
-// GET /api/v1/tasks
-func (h *TaskHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-
-	resp, total, err := h.taskService.List(c.Request.Context(), page, pageSize)
-	if err != nil {
-		utils.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	utils.SuccessWithData(c, gin.H{
-		"list":      resp,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
 }
 
 // Search 搜索任务

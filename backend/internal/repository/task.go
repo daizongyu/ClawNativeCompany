@@ -4,12 +4,22 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"claw/internal/database"
 	"claw/internal/model"
 
 	"gorm.io/gorm"
 )
+
+// TaskStats 任务统计
+type TaskStats struct {
+	Total           int64
+	Completed     int64
+	Pending       int64
+	TodayNew      int64
+	TodayCompleted int64
+}
 
 // TaskRepository 任务 Repository 接口
 type TaskRepository interface {
@@ -27,6 +37,7 @@ type TaskRepository interface {
 	ClaimTask(ctx context.Context, taskID string, employeeID string) error
 	CountByStatus(ctx context.Context, status model.TaskStatus) (int64, error)
 	CountByAssignee(ctx context.Context, assigneeID string) (int64, int64, int64, error)
+	GetStats(ctx context.Context) (*TaskStats, error)
 }
 
 // taskRepo 任务 Repository 实现
@@ -248,4 +259,37 @@ func (r *taskRepo) CountByAssignee(ctx context.Context, assigneeID string) (int6
 	}
 
 	return pending, inProgress, completed, nil
+}
+
+// GetStats 获取任务统计
+func (r *taskRepo) GetStats(ctx context.Context) (*TaskStats, error) {
+	stats := &TaskStats{}
+
+	// 总任务数
+	if err := r.db.WithContext(ctx).Model(&model.Task{}).Count(&stats.Total).Error; err != nil {
+		return nil, err
+	}
+
+	// 已完成任务数
+	if err := r.db.WithContext(ctx).Model(&model.Task{}).Where("status = ?", model.TaskStatusCompleted).Count(&stats.Completed).Error; err != nil {
+		return nil, err
+	}
+
+	// 待处理任务数
+	if err := r.db.WithContext(ctx).Model(&model.Task{}).Where("status = ?", model.TaskStatusPending).Count(&stats.Pending).Error; err != nil {
+		return nil, err
+	}
+
+	// 今日新建任务数
+	today := time.Now().Format("2006-01-01")
+	if err := r.db.WithContext(ctx).Model(&model.Task{}).Where("DATE(created_at) = ?", today).Count(&stats.TodayNew).Error; err != nil {
+		return nil, err
+	}
+
+	// 今日完成任务数
+	if err := r.db.WithContext(ctx).Model(&model.Task{}).Where("status = ? AND DATE(updated_at) = ?", model.TaskStatusCompleted, today).Count(&stats.TodayCompleted).Error; err != nil {
+		return nil, err
+	}
+
+	return stats, nil
 }

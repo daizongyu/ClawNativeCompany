@@ -23,6 +23,7 @@ var (
 	ErrInvalidEmployeeType = errors.New("无效的员工类型")
 	ErrInvalidStatus       = errors.New("无效的状态")
 	ErrCannotDeleteSelf    = errors.New("不能删除自己")
+	ErrInvalidPassword     = errors.New("密码不能为空")
 )
 
 // EmployeeService 员工服务
@@ -39,10 +40,10 @@ func NewEmployeeService() *EmployeeService {
 
 // CreateEmployeeRequest 创建员工请求
 type CreateEmployeeRequest struct {
-	Name     string `json:"name" validate:"required,min=2,max=100"`
+	Name     string `json:"name" validate:"required,min=1,max=100"`
 	Type     string `json:"type" validate:"required,oneof=human agent"`
 	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required_if=Type human,min=8"`
+	Password string `json:"password" validate:"min=6"`
 	Skills   []string `json:"skills"`
 }
 
@@ -134,6 +135,11 @@ func (s *EmployeeService) Create(ctx context.Context, req *CreateEmployeeRequest
 	empType := model.EmployeeType(req.Type)
 	if empType != model.EmployeeTypeHuman && empType != model.EmployeeTypeAgent {
 		return nil, ErrInvalidEmployeeType
+	}
+
+	// human 类型必须有密码
+	if empType == model.EmployeeTypeHuman && req.Password == "" {
+		return nil, ErrInvalidPassword
 	}
 
 	// 构建技能 JSON
