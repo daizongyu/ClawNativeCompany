@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm, Badge } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, MessageOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, MessageOutlined, UserAddOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { channelApi, Channel, CreateChannelRequest } from '../api/channel';
@@ -15,7 +15,11 @@ const Channels: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
+  const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
+  const [addingMemberChannel, setAddingMemberChannel] = useState<Channel | null>(null);
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
   const [form] = Form.useForm();
+  const [addMemberForm] = Form.useForm();
 
   // 设置当前页面
   useEffect(() => {
@@ -88,6 +92,38 @@ const Channels: React.FC = () => {
 
   const handleEnterChat = (id: string) => {
     navigate(`/channels/${id}`);
+  };
+
+  const handleAddMember = (channel: Channel) => {
+    setAddingMemberChannel(channel);
+    addMemberForm.resetFields();
+    setAddMemberModalVisible(true);
+  };
+
+  const handleAddMemberCancel = () => {
+    setAddMemberModalVisible(false);
+    setAddingMemberChannel(null);
+  };
+
+  const handleAddMemberSubmit = async () => {
+    try {
+      const values = await addMemberForm.validateFields();
+      if (!addingMemberChannel) return;
+      
+      setAddMemberLoading(true);
+      const res = await channelApi.addMember(addingMemberChannel.id, values.employee_id, values.role);
+      if (res.code === 0) {
+        message.success('添加成员成功');
+        setAddMemberModalVisible(false);
+        fetchChannels();
+      } else {
+        message.error(res.message || '添加成员失败');
+      }
+    } catch (error) {
+      console.error('添加成员失败:', error);
+    } finally {
+      setAddMemberLoading(false);
+    }
   };
 
   const handleModalOk = async () => {
@@ -171,6 +207,15 @@ const Channels: React.FC = () => {
             data-entity="channel"
           >
             进入
+          </Button>
+          <Button
+            icon={<UserAddOutlined />}
+            onClick={() => handleAddMember(record)}
+            data-testid={`channel-add-member-btn-${record.id}`}
+            data-action="add-member"
+            data-entity="channel"
+          >
+            添加成员
           </Button>
           <Button
             icon={<EditOutlined />}
@@ -280,6 +325,48 @@ const Channels: React.FC = () => {
                 data-testid="input-channel-description"
                 data-input-name="channel-description"
               />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* 添加成员弹窗 */}
+        <Modal
+          title={`添加成员 - ${addingMemberChannel?.name || ''}`}
+          open={addMemberModalVisible}
+          onOk={handleAddMemberSubmit}
+          onCancel={handleAddMemberCancel}
+          confirmLoading={addMemberLoading}
+          destroyOnClose
+          width={500}
+          data-testid="add-member-modal"
+        >
+          <Form form={addMemberForm} layout="vertical">
+            <Form.Item
+              label="员工ID"
+              name="employee_id"
+              rules={[{ required: true, message: '请输入员工ID' }]}
+            >
+              <Input
+                placeholder="请输入员工ID"
+                data-testid="input-add-member-employee-id"
+                data-input-name="employee-id"
+              />
+            </Form.Item>
+            <Form.Item
+              label="角色"
+              name="role"
+              initialValue="member"
+              rules={[{ required: true, message: '请选择角色' }]}
+            >
+              <Select
+                placeholder="请选择角色"
+                data-testid="select-add-member-role"
+                data-input-name="member-role"
+              >
+                <Option value="member">成员</Option>
+                <Option value="admin">管理员</Option>
+                <Option value="readonly">只读</Option>
+              </Select>
             </Form.Item>
           </Form>
         </Modal>

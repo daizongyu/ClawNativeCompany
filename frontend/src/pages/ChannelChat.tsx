@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Input, Button, Space, Tag, message, Empty, Modal, List, Avatar } from 'antd';
-import { SendOutlined, ArrowLeftOutlined, UserOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { SendOutlined, ArrowLeftOutlined, UserOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { channelApi, Channel, ChannelMember } from '../api/channel';
 import { messageApi, Message } from '../api/message';
 import { useAuthStore } from '../stores/auth';
@@ -23,6 +23,8 @@ const ChannelChat: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [infoModalVisible, setInfoModalVisible] = useState(false);
+  const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
 
   // 设置当前页面
   useEffect(() => {
@@ -60,7 +62,9 @@ const ChannelChat: React.FC = () => {
     try {
       const res = await messageApi.listByChannel(id);
       if (res.code === 0) {
-        setMessages(res.data.items || []);
+        // 支持两种返回格式: list 或 items
+        const messageList = res.data?.list || res.data?.items || [];
+        setMessages(messageList);
       }
     } catch (error) {
       console.error('获取消息失败:', error);
@@ -128,6 +132,34 @@ const ChannelChat: React.FC = () => {
 
   const handleCloseInfo = () => {
     setInfoModalVisible(false);
+  };
+
+  const handleShowAddMember = () => {
+    setAddMemberModalVisible(true);
+  };
+
+  const handleCloseAddMember = () => {
+    setAddMemberModalVisible(false);
+  };
+
+  const handleAddMember = async (employeeId: string, role: string = 'member') => {
+    if (!id) return;
+    setAddingMember(true);
+    try {
+      const res = await channelApi.addMember(id, employeeId, role);
+      if (res.code === 0) {
+        message.success('添加成员成功');
+        fetchMembers();
+        handleCloseAddMember();
+      } else {
+        message.error(res.message || '添加成员失败');
+      }
+    } catch (error) {
+      console.error('添加成员失败:', error);
+      message.error('添加成员失败');
+    } finally {
+      setAddingMember(false);
+    }
   };
 
   const isOwnMessage = (msg: Message) => {
@@ -304,7 +336,20 @@ const ChannelChat: React.FC = () => {
             </div>
 
             <div>
-              <h4 style={{ marginBottom: '16px' }}>成员列表 ({members.length})</h4>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h4 style={{ margin: 0 }}>成员列表 ({members.length})</h4>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={handleShowAddMember}
+                  data-testid="channel-add-member-btn"
+                  data-action="add-member"
+                  data-entity="channel"
+                >
+                  添加成员
+                </Button>
+              </div>
               <List
                 dataSource={members}
                 renderItem={(member) => (
@@ -328,7 +373,76 @@ const ChannelChat: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* 添加成员弹窗 */}
+      <Modal
+        title="添加成员"
+        open={addMemberModalVisible}
+        onCancel={handleCloseAddMember}
+        footer={null}
+        width={500}
+        data-testid="add-member-modal"
+      >
+        <AddMemberForm
+          onSubmit={handleAddMember}
+          onCancel={handleCloseAddMember}
+          loading={addingMember}
+        />
+      </Modal>
     </PageContainer>
+  );
+};
+
+// 添加成员表单组件
+interface AddMemberFormProps {
+  onSubmit: (employeeId: string, role: string) => void;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+const AddMemberForm: React.FC<AddMemberFormProps> = ({ onSubmit, onCancel, loading }) => {
+  const [employeeId, setEmployeeId] = useState('');
+  const [role, setRole] = useState('member');
+
+  const handleSubmit = () => {
+    if (!employeeId.trim()) {
+      message.error('请输入员工ID');
+      return;
+    }
+    onSubmit(employeeId.trim(), role);
+  };
+
+  return (
+    <div style={{ padding: '16px 0' }}>
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '8px' }}>员工ID：</label>
+        <Input
+          value={employeeId}
+          onChange={(e) => setEmployeeId(e.target.value)}
+          placeholder="请输入员工ID"
+          data-testid="add-member-employee-id"
+        />
+      </div>
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ display: 'block', marginBottom: '8px' }}>角色：</label>
+        <select
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+          style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #d9d9d9' }}
+          data-testid="add-member-role"
+        >
+          <option value="member">成员</option>
+          <option value="admin">管理员</option>
+          <option value="readonly">只读</option>
+        </select>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+        <Button onClick={onCancel} data-testid="add-member-cancel">取消</Button>
+        <Button type="primary" loading={loading} onClick={handleSubmit} data-testid="add-member-submit">
+          确定
+        </Button>
+      </div>
+    </div>
   );
 };
 
