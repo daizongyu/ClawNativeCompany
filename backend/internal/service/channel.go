@@ -3,6 +3,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -154,12 +155,29 @@ func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channe
 
 // toChannelMemberResponse 转换成员模型到响应
 func toChannelMemberResponse(m *model.ChannelMember) *ChannelMemberResponse {
-	return &ChannelMemberResponse{
+	resp := &ChannelMemberResponse{
 		ChannelID:  m.ChannelID,
 		EmployeeID: m.EmployeeID,
 		Role:       string(m.Role),
 		JoinedAt:   m.CreatedAt.Format("2006-01-02T15:04:05"),
 	}
+
+	// 添加员工信息
+	if m.Employee != nil {
+		skills := []string{}
+		if m.Employee.Skills != "" {
+			_ = json.Unmarshal([]byte(m.Employee.Skills), &skills)
+		}
+		resp.Employee = &EmployeeSummary{
+			ID:     m.Employee.ID,
+			Name:   m.Employee.Name,
+			Type:   string(m.Employee.Type),
+			Email:  m.Employee.Email,
+			Skills: skills,
+		}
+	}
+
+	return resp
 }
 
 // Create 创建频道

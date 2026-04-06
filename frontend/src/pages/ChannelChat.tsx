@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Input, Button, Space, Tag, message, Empty } from 'antd';
+import { Input, Button, Space, Tag, message, Empty, Modal, List, Avatar } from 'antd';
 import { SendOutlined, ArrowLeftOutlined, UserOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { channelApi, Channel, ChannelMember } from '../api/channel';
 import { messageApi, Message } from '../api/message';
@@ -22,6 +22,7 @@ const ChannelChat: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [infoModalVisible, setInfoModalVisible] = useState(false);
 
   // 设置当前页面
   useEffect(() => {
@@ -121,6 +122,14 @@ const ChannelChat: React.FC = () => {
     navigate('/channels');
   };
 
+  const handleShowInfo = () => {
+    setInfoModalVisible(true);
+  };
+
+  const handleCloseInfo = () => {
+    setInfoModalVisible(false);
+  };
+
   const isOwnMessage = (msg: Message) => {
     return msg.sender_id === user?.id;
   };
@@ -172,6 +181,7 @@ const ChannelChat: React.FC = () => {
           </Tag>
           <Button
             icon={<InfoCircleOutlined />}
+            onClick={handleShowInfo}
             data-testid="channel-chat-info-btn"
             data-action="info"
             data-entity="channel"
@@ -267,6 +277,57 @@ const ChannelChat: React.FC = () => {
           </Button>
         </Space>
       </div>
+
+      {/* 频道详情弹窗 */}
+      <Modal
+        title="频道详情"
+        open={infoModalVisible}
+        onCancel={handleCloseInfo}
+        footer={null}
+        width={600}
+        data-testid="channel-info-modal"
+      >
+        {channel && (
+          <div style={{ padding: '16px 0' }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ marginBottom: '8px' }}>{channel.name}</h3>
+              <Tag color={channel.type === 'public' ? 'green' : 'orange'}>
+                {channel.type === 'public' ? '公开频道' : '私有频道'}
+              </Tag>
+              <p style={{ marginTop: '12px', color: '#666' }}>
+                {channel.description || '暂无描述'}
+              </p>
+              <div style={{ marginTop: '12px', fontSize: '12px', color: '#999' }}>
+                创建者: {channel.creator_name || channel.created_by} | 
+                创建时间: {dayjs(channel.created_at).format('YYYY-MM-DD HH:mm')}
+              </div>
+            </div>
+
+            <div>
+              <h4 style={{ marginBottom: '16px' }}>成员列表 ({members.length})</h4>
+              <List
+                dataSource={members}
+                renderItem={(member) => (
+                  <List.Item key={member.employee_id}>
+                    <List.Item.Meta
+                      avatar={<Avatar>{member.employee?.name?.charAt(0) || '?'}</Avatar>}
+                      title={member.employee?.name || member.employee_id}
+                      description={
+                        <Space>
+                          <Tag color={member.role === 'admin' ? 'red' : 'blue'}>
+                            {member.role === 'admin' ? '管理员' : member.role === 'readonly' ? '只读' : '成员'}
+                          </Tag>
+                          {member.employee?.email}
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
     </PageContainer>
   );
 };

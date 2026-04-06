@@ -436,8 +436,8 @@ func parseMentions(content string) *MentionInfo {
 		Skills:      []string{},
 	}
 
-	// 匹配 @用户名（字母数字下划线）
-	userPattern := regexp.MustCompile(`@([a-zA-Z0-9_\u4e00-\u9fa5]+)`)
+	// 匹配 @用户名（字母数字下划线和中文字符）
+	userPattern := regexp.MustCompile(`@([a-zA-Z0-9_\x{4e00}-\x{9fa5}]+)`)
 	userMatches := userPattern.FindAllStringSubmatch(content, -1)
 	for _, match := range userMatches {
 		if len(match) > 1 {
@@ -450,7 +450,7 @@ func parseMentions(content string) *MentionInfo {
 	}
 
 	// 匹配 @#技能名
-	skillPattern := regexp.MustCompile(`@#([a-zA-Z0-9_\u4e00-\u9fa5]+)`)
+	skillPattern := regexp.MustCompile(`@#([a-zA-Z0-9_\x{4e00}-\x{9fa5}]+)`)
 	skillMatches := skillPattern.FindAllStringSubmatch(content, -1)
 	for _, match := range skillMatches {
 		if len(match) > 1 {

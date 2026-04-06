@@ -54,6 +54,7 @@ type ChannelMember struct {
 	ChannelID  string      `gorm:"size:36;uniqueIndex:idx_channel_member;not null" json:"channel_id"`
 	EmployeeID string      `gorm:"size:36;uniqueIndex:idx_channel_member;not null;index" json:"employee_id"`
 	Role       ChannelRole `gorm:"size:20;default:'member'" json:"role"` // admin | member | readonly
+	Employee   *Employee   `gorm:"foreignKey:EmployeeID;references:ID" json:"employee,omitempty"`
 }
 
 // TableName 返回表名

@@ -15,10 +15,18 @@ export interface Channel {
 }
 
 export interface ChannelMember {
+  channel_id: string;
   employee_id: string;
-  employee_name: string;
-  role: 'owner' | 'admin' | 'member';
+  employee_name?: string;
+  role: 'owner' | 'admin' | 'member' | 'readonly';
   joined_at: string;
+  employee?: {
+    id: string;
+    name: string;
+    type: string;
+    email: string;
+    skills: string[];
+  };
 }
 
 export interface CreateChannelRequest {
