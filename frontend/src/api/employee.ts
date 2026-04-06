@@ -30,10 +30,25 @@ export interface UpdateEmployeeRequest {
   status?: 'active' | 'inactive';
 }
 
+export interface ListEmployeesParams {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  status?: string;
+  role?: string;
+  keyword?: string;
+}
+
 export const employeeApi = {
-  // 获取员工列表
-  list: (page: number = 1, pageSize: number = 20): Promise<any> => {
-    return request.get(`/employees?page=${page}&page_size=${pageSize}`);
+  // 获取员工列表（支持筛选）
+  list: (params: ListEmployeesParams = {}): Promise<any> => {
+    const { page = 1, pageSize = 20, type, status, role, keyword } = params;
+    let url = `/employees?page=${page}&page_size=${pageSize}`;
+    if (type) url += `&type=${encodeURIComponent(type)}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
+    if (role) url += `&role=${encodeURIComponent(role)}`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+    return request.get(url);
   },
 
   // 创建员工

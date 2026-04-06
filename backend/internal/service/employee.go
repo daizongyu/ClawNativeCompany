@@ -73,6 +73,8 @@ type ListEmployeeRequest struct {
 	PageSize int    `json:"page_size" validate:"min=1,max=100"`
 	Type     string `json:"type,omitempty" validate:"omitempty,oneof=human agent"`
 	Status   string `json:"status,omitempty" validate:"omitempty,oneof=active inactive"`
+	Role     string `json:"role,omitempty"`
+	Keyword  string `json:"keyword,omitempty"`
 }
 
 // ListEmployeeResponse 员工列表响应
@@ -203,8 +205,16 @@ func (s *EmployeeService) List(ctx context.Context, req *ListEmployeeRequest) (*
 		req.PageSize = 20
 	}
 
+	// 构建筛选条件
+	filter := &repository.EmployeeFilter{
+		Type:    req.Type,
+		Status:  req.Status,
+		Role:    req.Role,
+		Keyword: req.Keyword,
+	}
+
 	// 获取列表
-	emps, total, err := s.repo.List(ctx, req.Page, req.PageSize)
+	emps, total, err := s.repo.ListWithFilter(ctx, filter, req.Page, req.PageSize)
 	if err != nil {
 		logger.Error("获取员工列表失败", "error", err)
 		return nil, fmt.Errorf("获取员工列表失败: %w", err)

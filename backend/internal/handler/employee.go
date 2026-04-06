@@ -93,6 +93,8 @@ func (h *EmployeeHandler) List(c *gin.Context) {
 	req.PageSize = utils.GetIntQuery(c, "page_size", 20)
 	req.Type = c.Query("type")
 	req.Status = c.Query("status")
+	req.Role = c.Query("role")
+	req.Keyword = c.Query("keyword")
 
 	// 参数校验
 	if err := validator.ValidateStruct(req); err != nil {

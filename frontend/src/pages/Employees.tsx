@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { employeeApi, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../api/employee';
 import { PageContainer } from '../components/common';
 
@@ -14,6 +14,12 @@ const Employees: React.FC = () => {
   const [apiKeyModalVisible, setApiKeyModalVisible] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [form] = Form.useForm();
+  
+  // 筛选状态
+  const [filterType, setFilterType] = useState<string>('');
+  const [filterRole, setFilterRole] = useState<string>('');
+  const [filterKeyword, setFilterKeyword] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
 
   // 设置当前页面
   useEffect(() => {
@@ -37,7 +43,12 @@ const Employees: React.FC = () => {
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const res = await employeeApi.list();
+      const res = await employeeApi.list({
+        type: filterType,
+        role: filterRole,
+        keyword: filterKeyword,
+        status: filterStatus,
+      });
       if (res.code === 0) {
         // 后端返回的数据格式是 { list: [...], total: n, page: 1, page_size: 20, total_page: 1 }
         const employeeList = res.data.list || res.data.items || [];
@@ -52,7 +63,22 @@ const Employees: React.FC = () => {
 
   useEffect(() => {
     fetchEmployees();
-  }, []);
+  }, [filterType, filterRole, filterStatus]);
+
+  // 搜索处理（防抖）
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchEmployees();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterKeyword]);
+
+  const handleResetFilters = () => {
+    setFilterType('');
+    setFilterRole('');
+    setFilterKeyword('');
+    setFilterStatus('');
+  };
 
   const handleCreate = () => {
     setEditingEmployee(null);
@@ -138,13 +164,13 @@ const Employees: React.FC = () => {
       dataIndex: 'type',
       key: 'type',
       render: (type: string) => (
-        <Tag color={type === 'admin' ? 'red' : 'blue'}>
-          {type === 'admin' ? '管理员' : '普通员工'}
+        <Tag color={type === 'human' ? 'blue' : 'purple'}>
+          {type === 'human' ? '人类员工' : 'AI Agent'}
         </Tag>
       ),
     },
     {
-      title: '角色',
+      title: '职能',
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => role || '-',
@@ -211,6 +237,56 @@ const Employees: React.FC = () => {
       loading={loading}
     >
       <div style={{ padding: '24px' }}>
+        {/* 筛选栏 */}
+        <div style={{ marginBottom: '24px', padding: '16px', background: '#f5f5f5', borderRadius: '8px' }}>
+          <Space size="middle" wrap>
+            <Select
+              placeholder="选择类型"
+              value={filterType || undefined}
+              onChange={setFilterType}
+              allowClear
+              style={{ width: 120 }}
+              data-testid="filter-employee-type"
+            >
+              <Option value="human">人类员工</Option>
+              <Option value="agent">AI Agent</Option>
+            </Select>
+            <Select
+              placeholder="选择状态"
+              value={filterStatus || undefined}
+              onChange={setFilterStatus}
+              allowClear
+              style={{ width: 120 }}
+              data-testid="filter-employee-status"
+            >
+              <Option value="active">在职</Option>
+              <Option value="inactive">离职</Option>
+            </Select>
+            <Input
+              placeholder="输入职能"
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              style={{ width: 150 }}
+              data-testid="filter-employee-role"
+            />
+            <Input
+              placeholder="搜索姓名或邮箱"
+              value={filterKeyword}
+              onChange={(e) => setFilterKeyword(e.target.value)}
+              prefix={<SearchOutlined />}
+              style={{ width: 200 }}
+              data-testid="filter-employee-keyword"
+            />
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleResetFilters}
+              data-testid="filter-reset-btn"
+            >
+              重置
+            </Button>
+          </Space>
+        </div>
+
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h1>员工管理</h1>
           <Button

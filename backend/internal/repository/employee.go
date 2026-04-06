@@ -11,6 +11,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// EmployeeFilter 员工查询筛选条件
+type EmployeeFilter struct {
+	Type    string
+	Status  string
+	Role    string
+	Keyword string
+}
+
 // EmployeeRepository 员工 Repository 接口
 type EmployeeRepository interface {
 	Create(ctx context.Context, emp *model.Employee) error
@@ -21,6 +29,7 @@ type EmployeeRepository interface {
 	UpdateAPIKey(ctx context.Context, id, apiKey string) error
 	UpdateLastSeen(ctx context.Context, id string) error
 	List(ctx context.Context, page, pageSize int) ([]*model.Employee, int64, error)
+	ListWithFilter(ctx context.Context, filter *EmployeeFilter, page, pageSize int) ([]*model.Employee, int64, error)
 	SearchBySkills(ctx context.Context, skills []string, page, pageSize int) ([]*model.Employee, int64, error)
 	Count(ctx context.Context) (int64, error)
 }
@@ -97,6 +106,39 @@ func (r *employeeRepo) List(ctx context.Context, page, pageSize int) ([]*model.E
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&model.Employee{})
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := db.Scopes(database.Paginate(page, pageSize)).Find(&emps).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return emps, total, nil
+}
+
+// ListWithFilter 根据筛选条件查询员工列表
+func (r *employeeRepo) ListWithFilter(ctx context.Context, filter *EmployeeFilter, page, pageSize int) ([]*model.Employee, int64, error) {
+	var emps []*model.Employee
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&model.Employee{})
+
+	// 应用筛选条件
+	if filter.Type != "" {
+		db = db.Where("type = ?", filter.Type)
+	}
+	if filter.Status != "" {
+		db = db.Where("status = ?", filter.Status)
+	}
+	if filter.Role != "" {
+		db = db.Where("role = ?", filter.Role)
+	}
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		db = db.Where("name LIKE ? OR email LIKE ?", keyword, keyword)
+	}
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err
