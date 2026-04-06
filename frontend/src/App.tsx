@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuthStore } from './stores/auth';
 import MainLayout from './components/layout/MainLayout';
@@ -29,61 +29,87 @@ const LayoutRoute: React.FC<{ element: React.ReactElement }> = ({ element }) => 
 
 // 应用主组件
 const App: React.FC = () => {
+  // 初始化测试工具
+  useEffect(() => {
+    // 动态导入测试工具，确保在客户端环境
+    if (typeof window !== 'undefined') {
+      // 初始化消息拦截器
+      import('./utils/messageInterceptor').then((module) => {
+        if (module.messageInterceptor) {
+          module.messageInterceptor.init();
+        }
+      }).catch(() => {
+        // 忽略错误，测试工具是可选的
+      });
+
+      // 初始化测试 API 暴露
+      import('./utils/testExposer').then((module) => {
+        if (module.testExposer) {
+          module.testExposer.init();
+        }
+      }).catch(() => {
+        // 忽略错误，测试工具是可选的
+      });
+    }
+  }, []);
+
   return (
     <ConfigProvider locale={zhCN}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<Dashboard />} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employees"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<Employees />} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/channels"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<Channels />} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/channels/:id"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<ChannelChat />} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/tasks"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<Tasks />} />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/workflows"
-            element={
-              <ProtectedRoute>
-                <LayoutRoute element={<Workflows />} />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
+      <AntdApp>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Dashboard />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/employees"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Employees />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/channels"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Channels />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/channels/:id"
+              element={
+                <ProtectedRoute>
+                  <ChannelChat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Tasks />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Workflows />} />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </BrowserRouter>
+      </AntdApp>
     </ConfigProvider>
   );
 };

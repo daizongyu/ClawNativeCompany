@@ -58,7 +58,7 @@ func (r *taskRepo) Create(ctx context.Context, task *model.Task) error {
 // GetByID 根据 ID 获取任务
 func (r *taskRepo) GetByID(ctx context.Context, id string) (*model.Task, error) {
 	var task model.Task
-	err := r.db.WithContext(ctx).First(&task, "id = ?", id).Error
+	err := r.db.WithContext(ctx).Preload("Creator").Preload("Assignee").First(&task, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrNotFound
@@ -86,7 +86,7 @@ func (r *taskRepo) List(ctx context.Context, page, pageSize int) ([]*model.Task,
 	db := r.db.WithContext(ctx).Model(&model.Task{})
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -102,7 +102,7 @@ func (r *taskRepo) ListByAssignee(ctx context.Context, assigneeID string, page, 
 	db := r.db.WithContext(ctx).Model(&model.Task{}).Where("assignee_id = ?", assigneeID)
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -118,7 +118,7 @@ func (r *taskRepo) ListByStatus(ctx context.Context, status model.TaskStatus, pa
 	db := r.db.WithContext(ctx).Model(&model.Task{}).Where("status = ?", status)
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -134,7 +134,7 @@ func (r *taskRepo) ListByWorkflow(ctx context.Context, workflowID string, page, 
 	db := r.db.WithContext(ctx).Model(&model.Task{}).Where("workflow_id = ?", workflowID)
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,7 +152,7 @@ func (r *taskRepo) ListUnclaimed(ctx context.Context, page, pageSize int) ([]*mo
 		Where("status = ?", model.TaskStatusPending)
 	db.Count(&total)
 
-	err := db.Order("priority DESC, created_at ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("priority DESC, created_at ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -168,7 +168,7 @@ func (r *taskRepo) ListBySource(ctx context.Context, source model.TaskSource, pa
 	db := r.db.WithContext(ctx).Model(&model.Task{}).Where("source = ?", source)
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -197,7 +197,7 @@ func (r *taskRepo) Search(ctx context.Context, keyword string, status *model.Tas
 
 	db.Count(&total)
 
-	err := db.Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
 	if err != nil {
 		return nil, 0, err
 	}

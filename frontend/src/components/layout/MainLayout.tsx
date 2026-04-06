@@ -11,11 +11,14 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
-    <Layout style={{ minHeight: '100vh' }}>
+    <Layout style={{ minHeight: '100vh' }} data-testid="main-layout">
       <Sidebar />
-      <Layout>
+      <Layout data-testid="main-layout-content">
         <Header />
-        <Content style={{ margin: '24px', padding: '24px', background: '#fff', borderRadius: '8px' }}>
+        <Content
+          style={{ margin: '24px', padding: '24px', background: '#fff', borderRadius: '8px' }}
+          data-testid="page-content"
+        >
           {children}
         </Content>
       </Layout>

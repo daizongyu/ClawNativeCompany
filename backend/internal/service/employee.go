@@ -112,11 +112,11 @@ func toEmployeeResponse(emp *model.Employee) *EmployeeResponse {
 		Email:     emp.Email,
 		Skills:    skills,
 		Status:    string(emp.Status),
-		CreatedAt: emp.CreatedAt.Format("2006-01-02T%H:%M:%S"),
+		CreatedAt: emp.CreatedAt.Format("2006-01-02T15:04:05"),
 	}
 
 	if emp.LastSeenAt != nil {
-		lastSeen := emp.LastSeenAt.Format("2006-01-02T%H:%M:%S")
+		lastSeen := emp.LastSeenAt.Format("2006-01-02T15:04:05")
 		resp.LastSeenAt = &lastSeen
 	}
 
@@ -374,7 +374,7 @@ func (s *EmployeeService) GenerateAPIKey(ctx context.Context, id string) (*APIKe
 
 	return &APIKeyResponse{
 		APIKey:    apiKey,
-		UpdatedAt: emp.UpdatedAt.Format("2006-01-02T%H:%M:%S"),
+		UpdatedAt: emp.UpdatedAt.Format("2006-01-02T15:04:05"),
 	}, nil
 }
 

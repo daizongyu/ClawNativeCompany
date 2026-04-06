@@ -123,8 +123,8 @@ func toMessageResponse(msg *model.Message) *MessageResponse {
 		Content:   msg.Content,
 		Mentions:  []string(msg.Mentions),
 		Skills:    []string(msg.Skills),
-		CreatedAt: msg.CreatedAt.Format("2006-01-02T%H:%M:%S"),
-		UpdatedAt: msg.UpdatedAt.Format("2006-01-02T%H:%M:%S"),
+		CreatedAt: msg.CreatedAt.Format("2006-01-02T15:04:05"),
+		UpdatedAt: msg.UpdatedAt.Format("2006-01-02T15:04:05"),
 	}
 
 	if msg.WorkflowID != nil {

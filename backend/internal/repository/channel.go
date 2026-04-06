@@ -81,7 +81,7 @@ func (r *channelRepo) List(ctx context.Context, page, pageSize int) ([]*model.Ch
 	var channels []*model.Channel
 	var total int64
 
-	db := r.db.WithContext(ctx).Model(&model.Channel{})
+	db := r.db.WithContext(ctx).Model(&model.Channel{}).Preload("Members")
 
 	if err := db.Count(&total).Error; err != nil {
 		return nil, 0, err

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, List, Tag, Spin, Progress } from 'antd';
-import { 
-  TeamOutlined, 
-  MessageOutlined, 
+import { Card, Row, Col, Statistic, List, Tag } from 'antd';
+import {
+  TeamOutlined,
+  MessageOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   NodeIndexOutlined,
@@ -12,6 +12,7 @@ import { dashboardApi } from '../api/dashboard';
 import { taskApi } from '../api/task';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { PageContainer } from '../components/common';
 
 interface Task {
   id: string;
@@ -25,6 +26,13 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>({});
   const [recentTasks, setRecentTasks] = useState<Task[]>([]);
+
+  // 设置当前页面
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.__CLAW_TEST__) {
+      window.__CLAW_TEST__.setCurrentPage('dashboard');
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -40,246 +48,163 @@ const Dashboard: React.FC = () => {
       }
 
       // 获取最近任务
-      const tasksRes = await taskApi.list(1, 5);
+      const tasksRes = await taskApi.getMyTasks();
       if (tasksRes.code === 0) {
-        setRecentTasks(tasksRes.data.list || []);
+        // 后端返回的数据格式是 { list: [...], total: n, page: 1, page_size: 20, total_page: 1 }
+        const taskList = tasksRes.data.list || tasksRes.data.items || [];
+        setRecentTasks(taskList.slice(0, 5));
       }
-
-
+    } catch (error) {
+      console.error('获取数据失败:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'default';
-      case 'claimed': return 'processing';
-      case 'completed': return 'success';
-      case 'cancelled': return 'error';
-      default: return 'default';
-    }
+    const colors: Record<string, string> = {
+      pending: 'default',
+      in_progress: 'processing',
+      completed: 'success',
+      cancelled: 'error',
+    };
+    return colors[status] || 'default';
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return '待处理';
-      case 'claimed': return '已认领';
-      case 'completed': return '已完成';
-      case 'cancelled': return '已取消';
-      default: return status;
-    }
+    const texts: Record<string, string> = {
+      pending: '待处理',
+      in_progress: '进行中',
+      completed: '已完成',
+      cancelled: '已取消',
+    };
+    return texts[status] || status;
   };
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'red';
-      case 'medium': return 'orange';
-      case 'low': return 'green';
-      default: return 'default';
-    }
+    const colors: Record<string, string> = {
+      low: 'success',
+      medium: 'warning',
+      high: 'error',
+    };
+    return colors[priority] || 'default';
   };
-
-  const getPriorityText = (priority: string) => {
-    switch (priority) {
-      case 'high': return '高';
-      case 'medium': return '中';
-      case 'low': return '低';
-      default: return priority;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
 
   return (
-    <div>
-      <h1 style={{ marginBottom: 24 }}>仪表盘</h1>
-      
-      {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="员工总数"
-              value={stats.employee_count || 0}
-              prefix={<TeamOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="频道数量"
-              value={stats.channel_count || 0}
-              prefix={<MessageOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="待处理任务"
-              value={stats.pending_task_count || 0}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="活跃工作流"
-              value={stats.active_workflow_count || 0}
-              prefix={<NodeIndexOutlined />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+    <PageContainer
+      data-testid="page-dashboard"
+      data-page="dashboard"
+      loading={loading}
+    >
+      <div style={{ padding: '24px' }}>
+        <h1 style={{ marginBottom: '24px' }}>仪表盘</h1>
 
-      {/* 任务统计 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={12}>
-          <Card title="任务概览">
-            <Row gutter={16}>
-              <Col span={8}>
-                <Statistic
-                  title="总任务"
-                  value={stats.total_tasks || 0}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="已完成"
-                  value={stats.completed_tasks || 0}
-                  valueStyle={{ color: '#52c41a' }}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="完成率"
-                  value={stats.task_completion_rate || 0}
-                  suffix="%"
-                  valueStyle={{ color: '#1890ff' }}
-                />
-              </Col>
-            </Row>
-            <div style={{ marginTop: 16 }}>
-              <Progress
-                percent={stats.task_completion_rate || 0}
-                status="active"
-                strokeColor={{ from: '#108ee9', to: '#87d068' }}
+        {/* 统计卡片 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card data-testid="stat-employee-card">
+              <Statistic
+                data-testid="stat-total-employees"
+                title="员工总数"
+                value={stats.employee_count || 0}
+                prefix={<TeamOutlined />}
+                valueStyle={{ color: '#3f8600' }}
               />
-            </div>
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card title="今日动态">
-            <Row gutter={16}>
-              <Col span={12}>
-                <Statistic
-                  title="今日新增任务"
-                  value={stats.today_new_tasks || 0}
-                  prefix={<ArrowUpOutlined style={{ color: '#52c41a' }} />}
-                />
-              </Col>
-              <Col span={12}>
-                <Statistic
-                  title="今日完成"
-                  value={stats.today_completed_tasks || 0}
-                  prefix={<CheckCircleOutlined style={{ color: '#1890ff' }} />}
-                />
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card data-testid="stat-channel-card">
+              <Statistic
+                data-testid="stat-total-channels"
+                title="频道总数"
+                value={stats.channel_count || 0}
+                prefix={<MessageOutlined />}
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card data-testid="stat-task-card">
+              <Statistic
+                data-testid="stat-total-tasks"
+                title="任务总数"
+                value={stats.task_count || 0}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: '#722ed1' }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card data-testid="stat-workflow-card">
+              <Statistic
+                data-testid="stat-total-workflows"
+                title="工作流总数"
+                value={stats.workflow_count || 0}
+                prefix={<NodeIndexOutlined />}
+                valueStyle={{ color: '#fa8c16' }}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      {/* 最近任务和工作流 */}
-      <Row gutter={16}>
-        <Col span={12}>
-          <Card 
-            title="最近任务" 
-            extra={<Link to="/tasks">查看全部</Link>}
-          >
-            <List
-              dataSource={recentTasks}
-              renderItem={(task) => (
-                <List.Item
-                  key={task.id}
-                  actions={[
-                    <Tag color={getPriorityColor(task.priority)}>
-                      {getPriorityText(task.priority)}
-                    </Tag>,
-                    <Tag color={getStatusColor(task.status)}>
-                      {getStatusText(task.status)}
-                    </Tag>,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={<Link to={`/tasks`}>{task.title}</Link>}
-                    description={task.due_date ? `截止: ${dayjs(task.due_date).format('MM-DD')}` : '无截止日期'}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-        <Col span={12}>
-          <Card 
-            title="工作流状态" 
-            extra={<Link to="/workflows">查看全部</Link>}
-          >
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Card size="small">
+        {/* 任务状态分布 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+          <Col xs={24} lg={12}>
+            <Card title="任务状态分布" data-testid="task-status-card">
+              <Row gutter={16}>
+                <Col span={12}>
                   <Statistic
-                    title="运行中"
-                    value={stats.running_workflows || 0}
-                    valueStyle={{ color: '#52c41a' }}
+                    data-testid="task-pending"
+                    title="待处理"
+                    value={stats.pending_tasks || 0}
+                    prefix={<ClockCircleOutlined />}
                   />
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card size="small">
+                </Col>
+                <Col span={12}>
                   <Statistic
-                    title="已暂停"
-                    value={stats.paused_workflows || 0}
-                    valueStyle={{ color: '#faad14' }}
+                    data-testid="task-in-progress"
+                    title="进行中"
+                    value={stats.in_progress_tasks || 0}
+                    prefix={<ArrowUpOutlined />}
                   />
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card size="small">
-                  <Statistic
-                    title="失败"
-                    value={stats.failed_workflows || 0}
-                    valueStyle={{ color: '#f5222d' }}
-                  />
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card size="small">
-                  <Statistic
-                    title="总执行次数"
-                    value={stats.total_executions || 0}
-                    valueStyle={{ color: '#1890ff' }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
-    </div>
+                </Col>
+              </Row>
+              <div style={{ marginTop: '16px' }}>
+                <div style={{ textAlign: 'center', marginTop: '8px' }} data-testid="task-completion-rate">
+                  任务完成率: {stats.task_completion_rate || 0}%
+                </div>
+              </div>
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card title="最近任务" data-testid="recent-tasks-card">
+              <List
+                data-testid="recent-tasks-section"
+                dataSource={recentTasks}
+                renderItem={(task) => (
+                  <List.Item
+                    key={task.id}
+                    actions={[
+                      <Tag color={getPriorityColor(task.priority)} key="priority">
+                        {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}
+                      </Tag>,
+                      <Tag color={getStatusColor(task.status)} key="status">
+                        {getStatusText(task.status)}
+                      </Tag>,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={<Link to={`/tasks`}>{task.title}</Link>}
+                      description={task.due_date ? `截止: ${dayjs(task.due_date).format('MM-DD')}` : '无截止日期'}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </div>
+    </PageContainer>
   );
 };
 
