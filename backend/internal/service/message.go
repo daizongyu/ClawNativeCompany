@@ -134,13 +134,11 @@ func toMessageResponse(msg *model.Message) *MessageResponse {
 		resp.ParentID = msg.ParentID
 	}
 
-	if msg.SenderID != "" {
-		// Sender 信息会在 repository 层通过 Preload 加载
-		// 这里简化处理，只设置 SenderID
+	if msg.Sender.ID != "" {
 		resp.Sender = &SenderSummary{
-			ID:   msg.SenderID,
-			Name: "", // 需要通过额外查询获取
-			Type: "",
+			ID:   msg.Sender.ID,
+			Name: msg.Sender.Name,
+			Type: string(msg.Sender.Type),
 		}
 	}
 

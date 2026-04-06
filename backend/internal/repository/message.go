@@ -48,7 +48,6 @@ func (r *messageRepo) GetByID(ctx context.Context, id string) (*model.Message, e
 	var msg model.Message
 	err := r.db.WithContext(ctx).
 		Preload("Sender").
-		Preload("Parent").
 		Where("id = ?", id).
 		First(&msg).Error
 
