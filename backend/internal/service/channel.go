@@ -26,13 +26,15 @@ var (
 
 // ChannelService 频道服务
 type ChannelService struct {
-	repo repository.ChannelRepository
+	repo     repository.ChannelRepository
+	empRepo  repository.EmployeeRepository
 }
 
 // NewChannelService 创建频道服务
 func NewChannelService() *ChannelService {
 	return &ChannelService{
-		repo: repository.NewChannelRepository(),
+		repo:    repository.NewChannelRepository(),
+		empRepo: repository.NewEmployeeRepository(),
 	}
 }
 
@@ -67,6 +69,8 @@ type ChannelResponse struct {
 	Type        string           `json:"type"`
 	Description string           `json:"description"`
 	CreatedBy   string           `json:"created_by"`
+	CreatorName string           `json:"creator_name"` // 创建者名称
+	MemberCount int              `json:"member_count"` // 成员数量
 	Members     []*MemberSummary `json:"members,omitempty"`
 	CreatedAt   string           `json:"created_at"`
 	UpdatedAt   string           `json:"updated_at"`
@@ -114,15 +118,23 @@ type ListChannelResponse struct {
 }
 
 // toChannelResponse 转换模型到响应
-func toChannelResponse(ch *model.Channel) *ChannelResponse {
+func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channel) *ChannelResponse {
 	resp := &ChannelResponse{
 		ID:          ch.ID,
 		Name:        ch.Name,
 		Type:        string(ch.Type),
 		Description: ch.Description,
 		CreatedBy:   ch.CreatedBy,
-		CreatedAt:   ch.CreatedAt.Format("2006-01-02T%H:%M:%S"),
-		UpdatedAt:   ch.UpdatedAt.Format("2006-01-02T%H:%M:%S"),
+		CreatedAt:   ch.CreatedAt.Format("2006-01-02T15:04:05"),
+		UpdatedAt:   ch.UpdatedAt.Format("2006-01-02T15:04:05"),
+	}
+
+	// 查询创建者名称
+	if ch.CreatedBy != "" {
+		creator, err := s.empRepo.GetByID(ctx, ch.CreatedBy)
+		if err == nil && creator != nil {
+			resp.CreatorName = creator.Name
+		}
 	}
 
 	// 转换成员摘要
@@ -134,6 +146,7 @@ func toChannelResponse(ch *model.Channel) *ChannelResponse {
 				Name: m.Name,
 			}
 		}
+		resp.MemberCount = len(ch.Members)
 	}
 
 	return resp
@@ -145,7 +158,7 @@ func toChannelMemberResponse(m *model.ChannelMember) *ChannelMemberResponse {
 		ChannelID:  m.ChannelID,
 		EmployeeID: m.EmployeeID,
 		Role:       string(m.Role),
-		JoinedAt:   m.CreatedAt.Format("2006-01-02T%H:%M:%S"),
+		JoinedAt:   m.CreatedAt.Format("2006-01-02T15:04:05"),
 	}
 }
 
@@ -187,7 +200,7 @@ func (s *ChannelService) Create(ctx context.Context, req *CreateChannelRequest, 
 		"type", ch.Type,
 	)
 
-	return toChannelResponse(ch), nil
+	return s.toChannelResponse(ctx, ch), nil
 }
 
 // GetByID 根据 ID 获取频道
@@ -201,7 +214,7 @@ func (s *ChannelService) GetByID(ctx context.Context, id string) (*ChannelRespon
 		return nil, fmt.Errorf("获取频道失败: %w", err)
 	}
 
-	return toChannelResponse(ch), nil
+	return s.toChannelResponse(ctx, ch), nil
 }
 
 // List 获取频道列表
@@ -223,7 +236,7 @@ func (s *ChannelService) List(ctx context.Context, req *ListChannelRequest) (*Li
 	// 转换响应
 	list := make([]*ChannelResponse, len(channels))
 	for i, ch := range channels {
-		list[i] = toChannelResponse(ch)
+		list[i] = s.toChannelResponse(ctx, ch)
 	}
 
 	totalPage := int(total) / req.PageSize
@@ -259,7 +272,7 @@ func (s *ChannelService) ListByMember(ctx context.Context, employeeID string, pa
 	// 转换响应
 	list := make([]*ChannelResponse, len(channels))
 	for i, ch := range channels {
-		list[i] = toChannelResponse(ch)
+		list[i] = s.toChannelResponse(ctx, ch)
 	}
 
 	totalPage := int(total) / pageSize
@@ -301,7 +314,7 @@ func (s *ChannelService) Update(ctx context.Context, id string, req *UpdateChann
 	}
 
 	logger.Info("频道更新成功", "id", id)
-	return toChannelResponse(ch), nil
+	return s.toChannelResponse(ctx, ch), nil
 }
 
 // Delete 删除频道

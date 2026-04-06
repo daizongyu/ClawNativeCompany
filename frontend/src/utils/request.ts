@@ -37,10 +37,17 @@ request.interceptors.response.use(
   (error) => {
     if (error.response) {
       const { status, data } = error.response;
+      // 登录接口的错误特殊处理：只显示消息，不重定向
+      const isLoginRequest = error.config?.url?.includes('/auth/login');
+      
       if (status === 401) {
-        message.error('登录已过期，请重新登录');
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
+        if (isLoginRequest) {
+          message.error(data?.message || '邮箱或密码错误');
+        } else {
+          message.error('登录已过期，请重新登录');
+          useAuthStore.getState().logout();
+          window.location.href = '/login';
+        }
       } else {
         message.error(data?.message || '请求失败');
       }

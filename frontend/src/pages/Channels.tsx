@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm, Badge } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, MessageOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 import { channelApi, Channel, CreateChannelRequest } from '../api/channel';
+import { PageContainer } from '../components/common';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -15,23 +17,44 @@ const Channels: React.FC = () => {
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [form] = Form.useForm();
 
+  // 设置当前页面
   useEffect(() => {
-    fetchChannels();
+    if (typeof window !== 'undefined' && window.__CLAW_TEST__) {
+      window.__CLAW_TEST__.setCurrentPage('channels');
+    }
   }, []);
+
+  // 暴露测试函数
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__TEST_CHANNELS__ = {
+        openModal: () => setModalVisible(true),
+        closeModal: () => setModalVisible(false),
+        getChannels: () => channels,
+        setEditingChannel: (ch: Channel | null) => setEditingChannel(ch),
+      };
+    }
+  }, [channels]);
 
   const fetchChannels = async () => {
     setLoading(true);
     try {
-      const res = await channelApi.myChannels();
+      const res = await channelApi.list();
       if (res.code === 0) {
-        // 后端返回分页格式 { list, total, page, page_size, total_page }
-        const data = res.data?.list || res.data || [];
-        setChannels(data);
+        // 后端返回的数据格式是 { list: [...], total: n, page: 1, page_size: 20, total_page: 1 }
+        const channelList = res.data.list || res.data.items || [];
+        setChannels(channelList);
       }
+    } catch (error) {
+      console.error('获取频道列表失败:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchChannels();
+  }, []);
 
   const handleCreate = () => {
     setEditingChannel(null);
@@ -43,8 +66,8 @@ const Channels: React.FC = () => {
     setEditingChannel(record);
     form.setFieldsValue({
       name: record.name,
-      description: record.description,
       type: record.type,
+      description: record.description,
     });
     setModalVisible(true);
   };
@@ -55,73 +78,66 @@ const Channels: React.FC = () => {
       if (res.code === 0) {
         message.success('删除成功');
         fetchChannels();
+      } else {
+        message.error(res.message || '删除失败');
       }
     } catch (error) {
-      message.error('删除失败');
+      console.error('删除频道失败:', error);
     }
+  };
+
+  const handleEnterChat = (id: string) => {
+    navigate(`/channels/${id}`);
   };
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      
       if (editingChannel) {
-        const res = await channelApi.update(editingChannel.id, {
-          name: values.name,
-          description: values.description,
-        });
+        const res = await channelApi.update(editingChannel.id, values);
         if (res.code === 0) {
           message.success('更新成功');
+          setModalVisible(false);
+          fetchChannels();
+        } else {
+          message.error(res.message || '更新失败');
         }
       } else {
-        const data: CreateChannelRequest = {
-          name: values.name,
-          description: values.description,
-          type: values.type,
-        };
-        const res = await channelApi.create(data);
+        const res = await channelApi.create(values as CreateChannelRequest);
         if (res.code === 0) {
           message.success('创建成功');
+          setModalVisible(false);
+          fetchChannels();
+        } else {
+          message.error(res.message || '创建失败');
         }
       }
-      setModalVisible(false);
-      fetchChannels();
     } catch (error) {
-      console.error('表单验证失败:', error);
-    }
-  };
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'public': return 'green';
-      case 'private': return 'orange';
-      case 'direct': return 'blue';
-      default: return 'default';
-    }
-  };
-
-  const getTypeText = (type: string) => {
-    switch (type) {
-      case 'public': return '公开';
-      case 'private': return '私有';
-      case 'direct': return '私聊';
-      default: return type;
+      console.error('保存频道失败:', error);
     }
   };
 
   const columns = [
     {
-      title: '频道名称',
+      title: '名称',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string, record: Channel) => (
-        <Space>
-          <span>{name}</span>
-          {record.unread_count && record.unread_count > 0 && (
-            <Badge count={record.unread_count} size="small" />
-          )}
-        </Space>
+    },
+    {
+      title: '类型',
+      dataIndex: 'type',
+      key: 'type',
+      render: (type: string) => (
+        <Tag color={type === 'public' ? 'green' : 'orange'}>
+          {type === 'public' ? '公开' : '私有'}
+        </Tag>
       ),
+    },
+    {
+      title: '成员数',
+      dataIndex: 'member_count',
+      key: 'member_count',
+      render: (count: number) => <Badge count={count} showZero color="#108ee9" />,
     },
     {
       title: '描述',
@@ -130,60 +146,56 @@ const Channels: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '类型',
-      dataIndex: 'type',
-      key: 'type',
-      render: (type: string) => (
-        <Tag color={getTypeColor(type)}>{getTypeText(type)}</Tag>
-      ),
-    },
-    {
-      title: '成员数',
-      dataIndex: 'member_count',
-      key: 'member_count',
-      render: (count: number) => `${count} 人`,
-    },
-    {
       title: '创建者',
       dataIndex: 'creator_name',
       key: 'creator_name',
+      render: (name: string) => name || '-',
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'active' ? 'success' : 'default'}>
-          {status === 'active' ? '活跃' : '归档'}
-        </Tag>
-      ),
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '操作',
       key: 'action',
       render: (_: any, record: Channel) => (
-        <Space size="small">
+        <Space size="middle">
           <Button
             type="primary"
-            size="small"
             icon={<MessageOutlined />}
-            onClick={() => navigate(`/channels/${record.id}`)}
+            onClick={() => handleEnterChat(record.id)}
+            data-testid={`channel-chat-btn-${record.id}`}
+            data-action="chat"
+            data-entity="channel"
           >
             进入
           </Button>
           <Button
-            type="text"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
-          />
+            data-testid={`channel-edit-btn-${record.id}`}
+            data-action="edit"
+            data-entity="channel"
+          >
+            编辑
+          </Button>
           <Popconfirm
-            title="确认删除"
-            description="确定要删除这个频道吗？"
+            title="确定删除该频道吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              data-testid={`channel-delete-btn-${record.id}`}
+              data-action="delete"
+              data-entity="channel"
+            >
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -191,62 +203,88 @@ const Channels: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0 }}>频道</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          新建频道
-        </Button>
-      </div>
-      <Table
-        columns={columns}
-        dataSource={channels}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-      />
+    <PageContainer
+      data-testid="page-channels"
+      data-page="channels"
+      loading={loading}
+    >
+      <div style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>频道管理</h1>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreate}
+            data-testid="channel-create-btn"
+            data-action="create"
+            data-entity="channel"
+          >
+            新建频道
+          </Button>
+        </div>
 
-      {/* 创建/编辑弹窗 */}
-      <Modal
-        title={editingChannel ? '编辑频道' : '新建频道'}
-        open={modalVisible}
-        onOk={handleModalOk}
-        onCancel={() => setModalVisible(false)}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ type: 'public' }}
+        <Table
+          columns={columns}
+          dataSource={channels}
+          rowKey="id"
+          data-testid="channel-table"
+          data-entity="channel"
+          onRow={(record) => ({
+            'data-testid': `channel-row-${record.id}`,
+            'data-channel-id': record.id,
+          } as any)}
+        />
+
+        <Modal
+          title={editingChannel ? '编辑频道' : '新建频道'}
+          open={modalVisible}
+          onOk={handleModalOk}
+          onCancel={() => setModalVisible(false)}
+          destroyOnClose
+          width={600}
+          data-testid="channel-modal"
         >
-          <Form.Item
-            name="name"
-            label="频道名称"
-            rules={[{ required: true, message: '请输入频道名称' }]}
-          >
-            <Input placeholder="请输入频道名称" />
-          </Form.Item>
-          <Form.Item
-            name="description"
-            label="描述"
-          >
-            <TextArea rows={3} placeholder="请输入频道描述" />
-          </Form.Item>
-          {!editingChannel && (
+          <Form form={form} layout="vertical">
             <Form.Item
-              name="type"
-              label="类型"
-              rules={[{ required: true }]}
+              label="名称"
+              name="name"
+              rules={[{ required: true, message: '请输入频道名称' }]}
             >
-              <Select>
-                <Option value="public">公开频道（所有人可见）</Option>
-                <Option value="private">私有频道（需邀请加入）</Option>
+              <Input
+                placeholder="请输入频道名称"
+                data-testid="input-channel-name"
+                data-input-name="channel-name"
+              />
+            </Form.Item>
+            <Form.Item
+              label="类型"
+              name="type"
+              rules={[{ required: true, message: '请选择频道类型' }]}
+            >
+              <Select
+                placeholder="请选择频道类型"
+                data-testid="input-channel-type"
+                data-input-name="channel-type"
+              >
+                <Option value="public">公开</Option>
+                <Option value="private">私有</Option>
               </Select>
             </Form.Item>
-          )}
-        </Form>
-      </Modal>
-    </div>
+            <Form.Item
+              label="描述"
+              name="description"
+            >
+              <TextArea
+                rows={4}
+                placeholder="请输入频道描述"
+                data-testid="input-channel-description"
+                data-input-name="channel-description"
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </PageContainer>
   );
 };
 

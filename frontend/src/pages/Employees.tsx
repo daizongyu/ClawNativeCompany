@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined } from '@ant-design/icons';
 import { employeeApi, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../api/employee';
+import { PageContainer } from '../components/common';
 
 const { Option } = Select;
 
@@ -14,21 +15,44 @@ const Employees: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [form] = Form.useForm();
 
+  // 设置当前页面
   useEffect(() => {
-    fetchEmployees();
+    if (typeof window !== 'undefined' && window.__CLAW_TEST__) {
+      window.__CLAW_TEST__.setCurrentPage('employees');
+    }
   }, []);
+
+  // 暴露测试函数
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__TEST_EMPLOYEES__ = {
+        openModal: () => setModalVisible(true),
+        closeModal: () => setModalVisible(false),
+        getEmployees: () => employees,
+        setEditingEmployee: (emp: Employee | null) => setEditingEmployee(emp),
+      };
+    }
+  }, [employees]);
 
   const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const res = await employeeApi.list(1, 100);
+      const res = await employeeApi.list();
       if (res.code === 0) {
-        setEmployees(res.data.list || []);
+        // 后端返回的数据格式是 { list: [...], total: n, page: 1, page_size: 20, total_page: 1 }
+        const employeeList = res.data.list || res.data.items || [];
+        setEmployees(employeeList);
       }
+    } catch (error) {
+      console.error('获取员工列表失败:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   const handleCreate = () => {
     setEditingEmployee(null);
@@ -38,13 +62,7 @@ const Employees: React.FC = () => {
 
   const handleEdit = (record: Employee) => {
     setEditingEmployee(record);
-    form.setFieldsValue({
-      name: record.name,
-      email: record.email,
-      type: record.type,
-      role: record.role,
-      skills: record.skills?.join(', '),
-    });
+    form.setFieldsValue(record);
     setModalVisible(true);
   };
 
@@ -54,9 +72,11 @@ const Employees: React.FC = () => {
       if (res.code === 0) {
         message.success('删除成功');
         fetchEmployees();
+      } else {
+        message.error(res.message || '删除失败');
       }
     } catch (error) {
-      message.error('删除失败');
+      console.error('删除员工失败:', error);
     }
   };
 
@@ -66,48 +86,39 @@ const Employees: React.FC = () => {
       if (res.code === 0) {
         setApiKey(res.data.api_key);
         setApiKeyModalVisible(true);
+        message.success('API Key 生成成功');
+      } else {
+        message.error(res.message || '生成失败');
       }
     } catch (error) {
-      message.error('生成 API Key 失败');
+      console.error('生成 API Key 失败:', error);
     }
   };
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      const skills = values.skills ? values.skills.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-      
       if (editingEmployee) {
-        // 更新
-        const data: UpdateEmployeeRequest = {
-          name: values.name,
-          email: values.email,
-          role: values.role,
-          skills,
-        };
-        const res = await employeeApi.update(editingEmployee.id, data);
+        const res = await employeeApi.update(editingEmployee.id, values as UpdateEmployeeRequest);
         if (res.code === 0) {
           message.success('更新成功');
+          setModalVisible(false);
+          fetchEmployees();
+        } else {
+          message.error(res.message || '更新失败');
         }
       } else {
-        // 创建
-        const data: CreateEmployeeRequest = {
-          name: values.name,
-          email: values.email,
-          password: values.password,
-          type: values.type,
-          role: values.role,
-          skills,
-        };
-        const res = await employeeApi.create(data);
+        const res = await employeeApi.create(values as CreateEmployeeRequest);
         if (res.code === 0) {
           message.success('创建成功');
+          setModalVisible(false);
+          fetchEmployees();
+        } else {
+          message.error(res.message || '创建失败');
         }
       }
-      setModalVisible(false);
-      fetchEmployees();
     } catch (error) {
-      console.error('表单验证失败:', error);
+      console.error('保存员工失败:', error);
     }
   };
 
@@ -127,8 +138,8 @@ const Employees: React.FC = () => {
       dataIndex: 'type',
       key: 'type',
       render: (type: string) => (
-        <Tag color={type === 'human' ? 'blue' : 'green'}>
-          {type === 'human' ? '人类' : 'Agent'}
+        <Tag color={type === 'admin' ? 'red' : 'blue'}>
+          {type === 'admin' ? '管理员' : '普通员工'}
         </Tag>
       ),
     },
@@ -136,26 +147,15 @@ const Employees: React.FC = () => {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-    },
-    {
-      title: '技能',
-      dataIndex: 'skills',
-      key: 'skills',
-      render: (skills: string[]) => (
-        <Space size="small">
-          {skills?.map(skill => (
-            <Tag key={skill}>{skill}</Tag>
-          ))}
-        </Space>
-      ),
+      render: (role: string) => role || '-',
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={status === 'active' ? 'success' : 'default'}>
-          {status === 'active' ? '活跃' : '停用'}
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? '在职' : '离职'}
         </Tag>
       ),
     },
@@ -163,25 +163,41 @@ const Employees: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_: any, record: Employee) => (
-        <Space size="small">
+        <Space size="middle">
           <Button
-            type="text"
+            type="primary"
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
-          />
+            data-testid={`employee-edit-btn-${record.id}`}
+            data-action="edit"
+            data-entity="employee"
+          >
+            编辑
+          </Button>
           <Button
-            type="text"
             icon={<KeyOutlined />}
             onClick={() => handleGenerateApiKey(record.id)}
-          />
+            data-testid={`employee-apikey-btn-${record.id}`}
+            data-action="generate-apikey"
+            data-entity="employee"
+          >
+            API Key
+          </Button>
           <Popconfirm
-            title="确认删除"
-            description="确定要删除这个员工吗？"
+            title="确定删除该员工吗？"
             onConfirm={() => handleDelete(record.id)}
             okText="确定"
             cancelText="取消"
           >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              data-testid={`employee-delete-btn-${record.id}`}
+              data-action="delete"
+              data-entity="employee"
+            >
+              删除
+            </Button>
           </Popconfirm>
         </Space>
       ),
@@ -189,107 +205,132 @@ const Employees: React.FC = () => {
   ];
 
   return (
-    <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ margin: 0 }}>员工管理</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          新建员工
-        </Button>
-      </div>
-      <Table
-        columns={columns}
-        dataSource={employees}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 10 }}
-      />
+    <PageContainer
+      data-testid="page-employees"
+      data-page="employees"
+      loading={loading}
+    >
+      <div style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1>员工管理</h1>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreate}
+            data-testid="employee-create-btn"
+            data-action="create"
+            data-entity="employee"
+          >
+            新建员工
+          </Button>
+        </div>
 
-      {/* 创建/编辑弹窗 */}
-      <Modal
-        title={editingEmployee ? '编辑员工' : '新建员工'}
-        open={modalVisible}
-        onOk={handleModalOk}
-        onCancel={() => setModalVisible(false)}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{ type: 'human' }}
-        >
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[{ required: true, message: '请输入姓名' }]}
-          >
-            <Input placeholder="请输入姓名" />
-          </Form.Item>
-          <Form.Item
-            name="email"
-            label="邮箱"
-            rules={[
-              { required: true, message: '请输入邮箱' },
-              { type: 'email', message: '请输入有效的邮箱' },
-            ]}
-          >
-            <Input placeholder="请输入邮箱" />
-          </Form.Item>
-          {!editingEmployee && (
-            <Form.Item
-              name="password"
-              label="密码"
-              rules={[{ required: true, message: '请输入密码' }]}
-            >
-              <Input.Password placeholder="请输入密码" />
-            </Form.Item>
-          )}
-          <Form.Item
-            name="type"
-            label="类型"
-            rules={[{ required: true }]}
-          >
-            <Select disabled={!!editingEmployee}>
-              <Option value="human">人类</Option>
-              <Option value="agent">Agent</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="role"
-            label="角色"
-          >
-            <Input placeholder="请输入角色，如：开发工程师" />
-          </Form.Item>
-          <Form.Item
-            name="skills"
-            label="技能"
-            extra="多个技能用逗号分隔"
-          >
-            <Input placeholder="如：Python, React, 数据分析" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* API Key 弹窗 */}
-      <Modal
-        title="API Key"
-        open={apiKeyModalVisible}
-        onOk={() => setApiKeyModalVisible(false)}
-        onCancel={() => setApiKeyModalVisible(false)}
-        footer={[
-          <Button key="ok" type="primary" onClick={() => setApiKeyModalVisible(false)}>
-            确定
-          </Button>,
-        ]}
-      >
-        <p>请妥善保存以下 API Key，它只会显示一次：</p>
-        <Input.TextArea
-          value={apiKey}
-          readOnly
-          rows={4}
-          style={{ fontFamily: 'monospace' }}
+        <Table
+          columns={columns}
+          dataSource={employees}
+          rowKey="id"
+          data-testid="employee-table"
+          data-entity="employee"
+          rowClassName={(record) => `employee-row-${record.id}`}
+          onRow={(record) => ({
+            'data-testid': `employee-row-${record.id}`,
+            'data-employee-id': record.id,
+          } as any)}
         />
-      </Modal>
-    </div>
+
+        {/* 编辑/创建模态框 */}
+        <Modal
+          title={editingEmployee ? '编辑员工' : '新建员工'}
+          open={modalVisible}
+          onOk={handleModalOk}
+          onCancel={() => setModalVisible(false)}
+          destroyOnClose
+          data-testid="employee-modal"
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label="姓名"
+              name="name"
+              rules={[{ required: true, message: '请输入姓名' }]}
+            >
+              <Input
+                placeholder="请输入姓名"
+                data-testid="input-employee-name"
+                data-input-name="employee-name"
+              />
+            </Form.Item>
+            <Form.Item
+              label="邮箱"
+              name="email"
+              rules={[
+                { required: true, message: '请输入邮箱' },
+                { type: 'email', message: '请输入有效的邮箱地址' },
+              ]}
+            >
+              <Input
+                placeholder="请输入邮箱"
+                data-testid="input-employee-email"
+                data-input-name="employee-email"
+              />
+            </Form.Item>
+            <Form.Item
+              label="类型"
+              name="type"
+              rules={[{ required: true, message: '请选择类型' }]}
+            >
+              <Select
+                placeholder="请选择类型"
+                data-testid="input-employee-type"
+                data-input-name="employee-type"
+              >
+                <Option value="employee">普通员工</Option>
+                <Option value="admin">管理员</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              label="角色"
+              name="role"
+            >
+              <Input
+                placeholder="请输入角色"
+                data-testid="input-employee-role"
+                data-input-name="employee-role"
+              />
+            </Form.Item>
+            {!editingEmployee && (
+              <Form.Item
+                label="密码"
+                name="password"
+                rules={[{ required: true, message: '请输入密码' }]}
+              >
+                <Input.Password
+                  placeholder="请输入密码"
+                  data-testid="input-employee-password"
+                  data-input-name="employee-password"
+                />
+              </Form.Item>
+            )}
+          </Form>
+        </Modal>
+
+        {/* API Key 展示模态框 */}
+        <Modal
+          title="API Key"
+          open={apiKeyModalVisible}
+          onOk={() => setApiKeyModalVisible(false)}
+          onCancel={() => setApiKeyModalVisible(false)}
+          data-testid="apikey-modal"
+        >
+          <p>请复制并保存您的 API Key：</p>
+          <Input.TextArea
+            value={apiKey}
+            readOnly
+            rows={3}
+            data-testid="apikey-display"
+          />
+        </Modal>
+      </div>
+    </PageContainer>
   );
 };
 
