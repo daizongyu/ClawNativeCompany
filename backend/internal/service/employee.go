@@ -51,6 +51,7 @@ type CreateEmployeeRequest struct {
 // UpdateEmployeeRequest 更新员工请求
 type UpdateEmployeeRequest struct {
 	Name   string   `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Type   string   `json:"type,omitempty" validate:"omitempty,oneof=human agent"`
 	Email  string   `json:"email,omitempty" validate:"omitempty,email"`
 	Role   string   `json:"role,omitempty"`
 	Skills []string `json:"skills,omitempty"`
@@ -260,6 +261,12 @@ func (s *EmployeeService) Update(ctx context.Context, id string, req *UpdateEmpl
 	// 更新字段
 	if req.Name != "" {
 		emp.Name = req.Name
+	}
+	if req.Type != "" {
+		empType := model.EmployeeType(req.Type)
+		if empType == model.EmployeeTypeHuman || empType == model.EmployeeTypeAgent {
+			emp.Type = empType
+		}
 	}
 	if req.Email != "" {
 		// 检查新邮箱是否已被使用

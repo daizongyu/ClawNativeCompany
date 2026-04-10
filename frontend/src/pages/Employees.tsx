@@ -373,6 +373,22 @@ const Employees: React.FC = () => {
                 data-input-name="employee-role"
               />
             </Form.Item>
+            {editingEmployee && (
+              <Form.Item
+                label="状态"
+                name="status"
+                rules={[{ required: true, message: '请选择状态' }]}
+              >
+                <Select
+                  placeholder="请选择状态"
+                  data-testid="input-employee-status"
+                  data-input-name="employee-status"
+                >
+                  <Option value="active">在职</Option>
+                  <Option value="inactive">离职</Option>
+                </Select>
+              </Form.Item>
+            )}
             {!editingEmployee && (
               <Form.Item
                 label="密码"
