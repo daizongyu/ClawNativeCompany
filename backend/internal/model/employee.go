@@ -27,6 +27,7 @@ type Employee struct {
 	Type       EmployeeType   `gorm:"size:20;not null" json:"type"`           // human | agent
 	Email      string         `gorm:"size:255;uniqueIndex;not null" json:"email"`
 	Password   string         `gorm:"size:255" json:"-"`                      // 人类必填，Agent 可选
+	Role       string         `gorm:"size:100" json:"role"`                   // 职能：开发、产品、设计等
 	Skills     string         `gorm:"type:text" json:"skills"`                // JSON 数组: ["Go", "React"]
 	Status     EmployeeStatus `gorm:"size:20;default:'active'" json:"status"`
 	LastSeenAt *time.Time     `json:"last_seen_at,omitempty"`

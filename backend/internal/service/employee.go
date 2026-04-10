@@ -40,10 +40,11 @@ func NewEmployeeService() *EmployeeService {
 
 // CreateEmployeeRequest 创建员工请求
 type CreateEmployeeRequest struct {
-	Name     string `json:"name" validate:"required,min=1,max=100"`
-	Type     string `json:"type" validate:"required,oneof=human agent"`
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"min=6"`
+	Name     string   `json:"name" validate:"required,min=1,max=100"`
+	Type     string   `json:"type" validate:"required,oneof=human agent"`
+	Email    string   `json:"email" validate:"required,email"`
+	Password string   `json:"password" validate:"min:6"`
+	Role     string   `json:"role"`
 	Skills   []string `json:"skills"`
 }
 
@@ -51,6 +52,7 @@ type CreateEmployeeRequest struct {
 type UpdateEmployeeRequest struct {
 	Name   string   `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
 	Email  string   `json:"email,omitempty" validate:"omitempty,email"`
+	Role   string   `json:"role,omitempty"`
 	Skills []string `json:"skills,omitempty"`
 	Status string   `json:"status,omitempty" validate:"omitempty,oneof=active inactive"`
 }
@@ -61,6 +63,7 @@ type EmployeeResponse struct {
 	Name       string   `json:"name"`
 	Type       string   `json:"type"`
 	Email      string   `json:"email"`
+	Role       string   `json:"role,omitempty"`
 	Skills     []string `json:"skills"`
 	Status     string   `json:"status"`
 	LastSeenAt *string  `json:"last_seen_at,omitempty"`
@@ -112,6 +115,7 @@ func toEmployeeResponse(emp *model.Employee) *EmployeeResponse {
 		Name:      emp.Name,
 		Type:      string(emp.Type),
 		Email:     emp.Email,
+		Role:      emp.Role,
 		Skills:    skills,
 		Status:    string(emp.Status),
 		CreatedAt: emp.CreatedAt.Format("2006-01-02T15:04:05"),
@@ -152,6 +156,7 @@ func (s *EmployeeService) Create(ctx context.Context, req *CreateEmployeeRequest
 		Name:   req.Name,
 		Type:   empType,
 		Email:  req.Email,
+		Role:   req.Role,
 		Skills: string(skillsJSON),
 		Status: model.EmployeeStatusActive,
 	}
@@ -263,6 +268,9 @@ func (s *EmployeeService) Update(ctx context.Context, id string, req *UpdateEmpl
 			return nil, ErrEmployeeExists
 		}
 		emp.Email = req.Email
+	}
+	if req.Role != "" {
+		emp.Role = req.Role
 	}
 	if req.Skills != nil {
 		skillsJSON, _ := json.Marshal(req.Skills)

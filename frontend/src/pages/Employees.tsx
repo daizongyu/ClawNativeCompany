@@ -359,16 +359,16 @@ const Employees: React.FC = () => {
                 data-testid="input-employee-type"
                 data-input-name="employee-type"
               >
-                <Option value="employee">普通员工</Option>
-                <Option value="admin">管理员</Option>
+                <Option value="human">人类员工</Option>
+                <Option value="agent">AI Agent</Option>
               </Select>
             </Form.Item>
             <Form.Item
-              label="角色"
+              label="职能"
               name="role"
             >
               <Input
-                placeholder="请输入角色"
+                placeholder="请输入职能，如：开发、产品、设计等"
                 data-testid="input-employee-role"
                 data-input-name="employee-role"
               />
