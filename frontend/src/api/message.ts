@@ -1,13 +1,22 @@
 import request from '../utils/request';
 
+export interface Sender {
+  id: string;
+  name: string;
+  type: 'human' | 'agent';
+}
+
 export interface Message {
   id: string;
   channel_id: string;
   sender_id: string;
-  sender_name: string;
-  sender_type: 'human' | 'agent';
+  sender?: Sender;
+  sender_name?: string;
+  sender_type?: 'human' | 'agent';
   content: string;
-  content_type: 'text' | 'image' | 'file' | 'system';
+  content_type?: 'text' | 'image' | 'file' | 'system';
+  type?: 'text' | 'image' | 'file' | 'system';
+  mentions?: string[];
   parent_id?: string;
   created_at: string;
   updated_at: string;

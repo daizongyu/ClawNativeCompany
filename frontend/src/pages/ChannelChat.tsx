@@ -166,9 +166,38 @@ const ChannelChat: React.FC = () => {
     return msg.sender_id === user?.id;
   };
 
-  const getMemberName = (senderId: string) => {
-    const member = members.find((m) => m.employee_id === senderId);
+  // 获取发送者名称（优先使用消息中的 sender 对象）
+  const getSenderName = (msg: Message) => {
+    // 优先使用消息中的 sender 对象
+    if (msg.sender?.name) {
+      return msg.sender.name;
+    }
+    // 兼容旧格式
+    if (msg.sender_name) {
+      return msg.sender_name;
+    }
+    // 从成员列表查找
+    const member = members.find((m) => m.employee_id === msg.sender_id);
     return member?.employee_name || '未知用户';
+  };
+
+  // 解析 @提及并高亮显示
+  const renderMessageContent = (content: string, mentions?: string[]) => {
+    if (!mentions || mentions.length === 0) {
+      return content;
+    }
+
+    // 将 @提及替换为高亮样式
+    let result = content;
+    mentions.forEach((mention) => {
+      // 支持 @用户名 或 @员工ID 格式
+      const regex = new RegExp(`@(${mention}|[^\\s]+)`, 'g');
+      result = result.replace(regex, (match) => {
+        return `<span style="color: #1890ff; background: #e6f7ff; padding: 0 4px; border-radius: 4px;">${match}</span>`;
+      });
+    });
+
+    return <span dangerouslySetInnerHTML={{ __html: result }} />;
   };
 
   return (
@@ -260,9 +289,11 @@ const ChannelChat: React.FC = () => {
                   }}
                 >
                   <div style={{ marginBottom: '4px', fontSize: '12px', opacity: 0.8 }}>
-                    {getMemberName(msg.sender_id)} · {dayjs(msg.created_at).format('HH:mm')}
+                    {getSenderName(msg)} · {dayjs(msg.created_at).format('HH:mm')}
                   </div>
-                  <div style={{ wordBreak: 'break-word' }}>{msg.content}</div>
+                  <div style={{ wordBreak: 'break-word' }}>
+                    {renderMessageContent(msg.content, msg.mentions)}
+                  </div>
                 </div>
               </div>
             ))}
