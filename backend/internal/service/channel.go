@@ -49,6 +49,7 @@ type CreateChannelRequest struct {
 // UpdateChannelRequest 更新频道请求
 type UpdateChannelRequest struct {
 	Name        string `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Type        string `json:"type,omitempty" validate:"omitempty,oneof=public private dm"`
 	Description string `json:"description,omitempty" validate:"omitempty,max=500"`
 }
 
@@ -139,7 +140,13 @@ func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channe
 		}
 	}
 
-	// 转换成员摘要
+	// 查询成员数量（从数据库实时查询）
+	memberCount, err := s.repo.GetMemberCount(ctx, ch.ID)
+	if err == nil {
+		resp.MemberCount = int(memberCount)
+	}
+
+	// 转换成员摘要（用于详情展示）
 	if len(ch.Members) > 0 {
 		resp.Members = make([]*MemberSummary, len(ch.Members))
 		for i, m := range ch.Members {
@@ -148,7 +155,6 @@ func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channe
 				Name: m.Name,
 			}
 		}
-		resp.MemberCount = len(ch.Members)
 	}
 
 	return resp
@@ -328,6 +334,12 @@ func (s *ChannelService) Update(ctx context.Context, id string, req *UpdateChann
 	// 更新字段
 	if req.Name != "" {
 		ch.Name = req.Name
+	}
+	if req.Type != "" {
+		chType := model.ChannelType(req.Type)
+		if chType == model.ChannelTypePublic || chType == model.ChannelTypePrivate || chType == model.ChannelTypeDM {
+			ch.Type = chType
+		}
 	}
 	if req.Description != "" {
 		ch.Description = req.Description
