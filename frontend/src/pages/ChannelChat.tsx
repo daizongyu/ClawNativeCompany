@@ -5,6 +5,7 @@ import { SendOutlined, ArrowLeftOutlined, UserOutlined, InfoCircleOutlined, Plus
 import { channelApi, Channel, ChannelMember } from '../api/channel';
 import { messageApi, Message } from '../api/message';
 import { useAuthStore } from '../stores/auth';
+import { MentionSelect } from '../components/chat';
 import dayjs from 'dayjs';
 import { PageContainer } from '../components/common';
 
@@ -25,6 +26,12 @@ const ChannelChat: React.FC = () => {
   const [infoModalVisible, setInfoModalVisible] = useState(false);
   const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+
+  // @提及相关状态
+  const [mentionVisible, setMentionVisible] = useState(false);
+  const [mentionKeyword, setMentionKeyword] = useState('');
+  const [mentionStartIndex, setMentionStartIndex] = useState<number>(-1);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 设置当前页面
   useEffect(() => {
@@ -200,6 +207,60 @@ const ChannelChat: React.FC = () => {
     return <span dangerouslySetInnerHTML={{ __html: result }} />;
   };
 
+  // 处理输入框变化，检测 @ 提及
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPosition = e.target.selectionStart || 0;
+    setInputValue(value);
+
+    // 检测是否在输入 @
+    const textBeforeCursor = value.slice(0, cursorPosition);
+    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+    if (lastAtIndex !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
+      // 如果 @ 后面没有空格，说明正在输入提及
+      if (!textAfterAt.includes(' ')) {
+        setMentionVisible(true);
+        setMentionKeyword(textAfterAt);
+        setMentionStartIndex(lastAtIndex);
+        return;
+      }
+    }
+
+    setMentionVisible(false);
+  };
+
+  // 处理选择员工
+  const handleSelectMention = (employee: { id: string; name: string }) => {
+    if (mentionStartIndex === -1) return;
+
+    const beforeMention = inputValue.slice(0, mentionStartIndex);
+    const afterMention = inputValue.slice(mentionStartIndex + mentionKeyword.length + 1);
+    const newValue = `${beforeMention}@${employee.name} ${afterMention}`;
+
+    setInputValue(newValue);
+    setMentionVisible(false);
+    setMentionKeyword('');
+    setMentionStartIndex(-1);
+
+    // 聚焦回输入框
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  // 处理键盘事件
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter 发送消息（不按 Shift 时）
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() && !sending) {
+        handleSend();
+      }
+    }
+  };
+
   return (
     <PageContainer
       data-testid="page-channel-chat"
@@ -308,22 +369,26 @@ const ChannelChat: React.FC = () => {
           padding: '16px 24px',
           borderTop: '1px solid #e8e8e8',
           background: '#fff',
+          position: 'relative',
         }}
         data-testid="channel-chat-input-area"
       >
+        {/* @提及选择器 */}
+        <MentionSelect
+          visible={mentionVisible}
+          keyword={mentionKeyword}
+          onSelect={handleSelectMention}
+          onCancel={() => setMentionVisible(false)}
+        />
         <Space style={{ width: '100%' }} size="middle">
           <TextArea
+            ref={inputRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="输入消息..."
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            placeholder="输入消息... (Enter发送, Shift+Enter换行, @提及员工)"
             autoSize={{ minRows: 1, maxRows: 4 }}
             style={{ flex: 1 }}
-            onPressEnter={(e) => {
-              if (!e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
             data-testid="input-message-content"
             data-input-name="message-content"
           />
