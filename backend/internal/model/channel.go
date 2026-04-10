@@ -25,6 +25,7 @@ type Channel struct {
 	Type        ChannelType `gorm:"size:20;not null" json:"type"`
 	Description string      `gorm:"size:500" json:"description"`
 	CreatedBy   string      `gorm:"size:36;index;not null" json:"created_by"`
+	Creator     *Employee   `gorm:"foreignKey:CreatedBy;references:ID" json:"creator,omitempty"`
 	Members     []Employee  `gorm:"many2many:channel_members;" json:"members,omitempty"`
 }
 

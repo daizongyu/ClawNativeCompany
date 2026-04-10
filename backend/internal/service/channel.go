@@ -107,6 +107,7 @@ type ListChannelRequest struct {
 	Page     int    `json:"page" validate:"min=1"`
 	PageSize int    `json:"page_size" validate:"min=1,max=100"`
 	Type     string `json:"type,omitempty" validate:"omitempty,oneof=public private dm"`
+	Keyword  string `json:"keyword,omitempty"`
 }
 
 // ListChannelResponse 频道列表响应
@@ -245,7 +246,13 @@ func (s *ChannelService) List(ctx context.Context, req *ListChannelRequest) (*Li
 		req.PageSize = 20
 	}
 
-	channels, total, err := s.repo.List(ctx, req.Page, req.PageSize)
+	// 构建筛选条件
+	filter := repository.ListFilter{
+		Type:    req.Type,
+		Keyword: req.Keyword,
+	}
+
+	channels, total, err := s.repo.ListWithFilter(ctx, filter, req.Page, req.PageSize)
 	if err != nil {
 		logger.Error("获取频道列表失败", "error", err)
 		return nil, fmt.Errorf("获取频道列表失败: %w", err)

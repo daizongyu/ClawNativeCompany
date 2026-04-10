@@ -21,6 +21,10 @@ const Channels: React.FC = () => {
   const [form] = Form.useForm();
   const [addMemberForm] = Form.useForm();
 
+  // 筛选状态
+  const [filterType, setFilterType] = useState<string>('');
+  const [filterKeyword, setFilterKeyword] = useState<string>('');
+
   // 设置当前页面
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__CLAW_TEST__) {
@@ -40,10 +44,32 @@ const Channels: React.FC = () => {
     }
   }, [channels]);
 
+  // 筛选变化时重新加载
+  useEffect(() => {
+    fetchChannels();
+  }, [filterType]);
+
+  // 关键词搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchChannels();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [filterKeyword]);
+
+  const handleResetFilters = () => {
+    setFilterType('');
+    setFilterKeyword('');
+  };
+
   const fetchChannels = async () => {
     setLoading(true);
     try {
-      const res = await channelApi.list();
+      const params: any = {};
+      if (filterType) params.type = filterType;
+      if (filterKeyword) params.keyword = filterKeyword;
+      
+      const res = await channelApi.list(params);
       if (res.code === 0) {
         // 后端返回的数据格式是 { list: [...], total: n, page: 1, page_size: 20, total_page: 1 }
         const channelList = res.data.list || res.data.items || [];
@@ -163,11 +189,15 @@ const Channels: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type: string) => (
-        <Tag color={type === 'public' ? 'green' : 'orange'}>
-          {type === 'public' ? '公开' : '私有'}
-        </Tag>
-      ),
+      render: (type: string) => {
+        const typeMap: Record<string, { label: string; color: string }> = {
+          public: { label: '公开频道', color: 'green' },
+          private: { label: '私有频道', color: 'orange' },
+          dm: { label: '私信', color: 'blue' },
+        };
+        const config = typeMap[type] || { label: type, color: 'default' };
+        return <Tag color={config.color}>{config.label}</Tag>;
+      },
     },
     {
       title: '成员数',
@@ -265,6 +295,32 @@ const Channels: React.FC = () => {
             data-entity="channel"
           >
             新建频道
+          </Button>
+        </div>
+
+        {/* 筛选栏 */}
+        <div style={{ marginBottom: '16px', display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <Select
+            placeholder="筛选类型"
+            allowClear
+            value={filterType || undefined}
+            onChange={(value) => setFilterType(value || '')}
+            style={{ width: 150 }}
+            data-testid="channel-filter-type"
+          >
+            <Option value="public">公开频道</Option>
+            <Option value="private">私有频道</Option>
+            <Option value="dm">私信</Option>
+          </Select>
+          <Input
+            placeholder="搜索频道名称或描述"
+            value={filterKeyword}
+            onChange={(e) => setFilterKeyword(e.target.value)}
+            style={{ width: 250 }}
+            data-testid="channel-filter-keyword"
+          />
+          <Button onClick={handleResetFilters} data-testid="channel-filter-reset">
+            重置
           </Button>
         </div>
 

@@ -20,6 +20,12 @@ var (
 	ErrAlreadyMember = errors.New("已经是频道成员")
 )
 
+// ListFilter 频道列表筛选条件
+type ListFilter struct {
+	Type    string // public | private
+	Keyword string // 搜索名称或描述
+}
+
 // ChannelRepository 频道 Repository 接口
 type ChannelRepository interface {
 	// 频道 CRUD
@@ -27,6 +33,7 @@ type ChannelRepository interface {
 	GetByID(ctx context.Context, id string) (*model.Channel, error)
 	List(ctx context.Context, page, pageSize int) ([]*model.Channel, int64, error)
 	ListByMember(ctx context.Context, employeeID string, page, pageSize int) ([]*model.Channel, int64, error)
+	ListWithFilter(ctx context.Context, filter ListFilter, page, pageSize int) ([]*model.Channel, int64, error)
 	Update(ctx context.Context, ch *model.Channel) error
 	Delete(ctx context.Context, id string) error
 
@@ -36,6 +43,7 @@ type ChannelRepository interface {
 	UpdateMemberRole(ctx context.Context, channelID, employeeID string, role model.ChannelRole) error
 	GetMember(ctx context.Context, channelID, employeeID string) (*model.ChannelMember, error)
 	ListMembers(ctx context.Context, channelID string) ([]*model.ChannelMember, error)
+	GetMemberCount(ctx context.Context, channelID string) (int64, error)
 
 	// 统计
 	Count(ctx context.Context) (int64, error)
@@ -109,6 +117,39 @@ func (r *channelRepo) ListByMember(ctx context.Context, employeeID string, page,
 	}
 
 	if err := db.Scopes(database.Paginate(page, pageSize)).Find(&channels).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return channels, total, nil
+}
+
+// ListWithFilter 带筛选条件的频道列表
+func (r *channelRepo) ListWithFilter(ctx context.Context, filter ListFilter, page, pageSize int) ([]*model.Channel, int64, error) {
+	var channels []*model.Channel
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&model.Channel{})
+
+	// 类型筛选
+	if filter.Type != "" {
+		db = db.Where("type = ?", filter.Type)
+	}
+
+	// 关键词搜索（名称或描述）
+	if filter.Keyword != "" {
+		keyword := "%" + filter.Keyword + "%"
+		db = db.Where("name LIKE ? OR description LIKE ?", keyword, keyword)
+	}
+
+	if err := db.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	if err := db.Scopes(database.Paginate(page, pageSize)).
+		Preload("Creator").
+		Preload("Members").
+		Order("created_at DESC").
+		Find(&channels).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -206,6 +247,16 @@ func (r *channelRepo) ListMembers(ctx context.Context, channelID string) ([]*mod
 		Where("channel_id = ?", channelID).
 		Find(&members).Error
 	return members, err
+}
+
+// GetMemberCount 获取频道成员数量
+func (r *channelRepo) GetMemberCount(ctx context.Context, channelID string) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&model.ChannelMember{}).
+		Where("channel_id = ?", channelID).
+		Count(&count).Error
+	return count, err
 }
 
 // CheckPermission 检查员工在频道的权限

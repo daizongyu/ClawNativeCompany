@@ -96,6 +96,7 @@ func (h *ChannelHandler) List(c *gin.Context) {
 	req.Page = utils.GetIntQuery(c, "page", 1)
 	req.PageSize = utils.GetIntQuery(c, "page_size", 20)
 	req.Type = c.Query("type")
+	req.Keyword = c.Query("keyword")
 
 	// 参数校验
 	if err := validator.ValidateStruct(req); err != nil {

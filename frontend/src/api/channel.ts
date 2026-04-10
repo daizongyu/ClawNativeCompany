@@ -42,10 +42,21 @@ export interface UpdateChannelRequest {
   status?: 'active' | 'archived';
 }
 
+export interface ListChannelsParams {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  keyword?: string;
+}
+
 export const channelApi = {
-  // 获取频道列表
-  list: (page: number = 1, pageSize: number = 20): Promise<any> => {
-    return request.get(`/channels?page=${page}&page_size=${pageSize}`);
+  // 获取频道列表（支持筛选）
+  list: (params: ListChannelsParams = {}): Promise<any> => {
+    const { page = 1, pageSize = 20, type, keyword } = params;
+    let url = `/channels?page=${page}&page_size=${pageSize}`;
+    if (type) url += `&type=${encodeURIComponent(type)}`;
+    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+    return request.get(url);
   },
 
   // 获取我的频道
