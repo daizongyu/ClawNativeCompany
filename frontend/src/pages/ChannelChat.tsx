@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Input, Button, Space, Tag, message, Empty, Modal, List, Avatar } from 'antd';
+import { Input, Button, Space, Tag, message, Empty, Modal, List, Avatar, Spin } from 'antd';
 import { SendOutlined, ArrowLeftOutlined, UserOutlined, InfoCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { channelApi, Channel, ChannelMember } from '../api/channel';
 import { messageApi, Message } from '../api/message';
 import { useAuthStore } from '../stores/auth';
 import { MentionSelect } from '../components/chat';
 import dayjs from 'dayjs';
-import { PageContainer } from '../components/common';
 
 const { TextArea } = Input;
 
@@ -89,6 +88,7 @@ const ChannelChat: React.FC = () => {
     try {
       const res = await channelApi.getMembers(id);
       if (res.code === 0) {
+        console.log('Members loaded:', res.data); // 调试日志
         setMembers(res.data);
       }
     } catch (error) {
@@ -217,6 +217,8 @@ const ChannelChat: React.FC = () => {
     const cursorPosition = e.target.selectionStart || 0;
     setInputValue(value);
 
+    console.log('Input changed:', { value, cursorPosition }); // 调试日志
+
     // 检测是否在输入 @
     const textBeforeCursor = value.slice(0, cursorPosition);
     const lastAtIndex = textBeforeCursor.lastIndexOf('@');
@@ -225,6 +227,7 @@ const ChannelChat: React.FC = () => {
       const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
       // 如果 @ 后面没有空格，说明正在输入提及
       if (!textAfterAt.includes(' ')) {
+        console.log('Showing mention selector:', { keyword: textAfterAt, membersCount: members.length }); // 调试日志
         setMentionVisible(true);
         setMentionKeyword(textAfterAt);
         setMentionStartIndex(lastAtIndex);
@@ -244,14 +247,18 @@ const ChannelChat: React.FC = () => {
     const memberName = member.employee_name || member.employee?.name || member.employee_id;
     const newValue = `${beforeMention}@${memberName} ${afterMention}`;
 
+    console.log('Selected member:', memberName); // 调试日志
     setInputValue(newValue);
     setMentionVisible(false);
     setMentionKeyword('');
     setMentionStartIndex(-1);
 
-    // 聚焦回输入框
+    // 聚焦回输入框并设置光标位置
     setTimeout(() => {
       inputRef.current?.focus();
+      // 将光标设置在 @用户名 之后
+      const cursorPos = mentionStartIndex + memberName.length + 2; // @ + 名字 + 空格
+      inputRef.current?.setSelectionRange(cursorPos, cursorPos);
     }, 0);
   };
 
@@ -267,12 +274,27 @@ const ChannelChat: React.FC = () => {
   };
 
   return (
-    <PageContainer
+    <div
       data-testid="page-channel-chat"
       data-page="channel-chat"
-      loading={loading}
-      style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
+      style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        flexDirection: 'column',
+        overflow: 'hidden'
+      }}
     >
+      {loading ? (
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center' 
+        }}>
+          <Spin size="large" tip="加载中..." />
+        </div>
+      ) : (
+        <>
       {/* 头部 - 固定在顶部 */}
       <div
         style={{
@@ -282,9 +304,7 @@ const ChannelChat: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           background: '#fff',
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
+          flexShrink: 0,
         }}
         data-testid="channel-chat-header"
       >
@@ -379,10 +399,8 @@ const ChannelChat: React.FC = () => {
           padding: '16px 24px',
           borderTop: '1px solid #e8e8e8',
           background: '#fff',
-          position: 'sticky',
-          bottom: 0,
-          zIndex: 100,
           flexShrink: 0,
+          position: 'relative', // 为 MentionSelect 提供定位上下文
         }}
         data-testid="channel-chat-input-area"
       >
@@ -500,7 +518,9 @@ const ChannelChat: React.FC = () => {
           loading={addingMember}
         />
       </Modal>
-    </PageContainer>
+        </>
+      )}
+    </div>
   );
 };
 

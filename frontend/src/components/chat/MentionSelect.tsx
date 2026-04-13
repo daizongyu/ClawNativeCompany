@@ -78,21 +78,23 @@ const MentionSelect: React.FC<MentionSelectProps> = ({
 
   if (!visible) return null;
 
+  console.log('MentionSelect rendering:', { visible, keyword, membersCount: members.length, filteredCount: filteredMembers.length }); // 调试日志
+
   return (
     <div
       ref={containerRef}
       style={{
         position: 'absolute',
-        bottom: '100%',
-        left: 0,
-        right: 0,
-        marginBottom: 8,
+        bottom: '60px', // 输入框高度约 40-50px，加上一些间距
+        left: '24px', // 与输入框左侧对齐
+        right: '24px', // 与输入框右侧对齐
         background: '#fff',
         borderRadius: 8,
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         zIndex: 1000,
         maxHeight: 300,
         overflow: 'auto',
+        border: '1px solid #e8e8e8',
       }}
       data-testid="mention-select"
     >

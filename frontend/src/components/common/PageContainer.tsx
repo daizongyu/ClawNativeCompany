@@ -27,9 +27,9 @@ export const PageContainer: React.FC<PageContainerProps> = ({
       data-loaded={!loading}
       data-loading={loading}
       className={className}
-      style={{ height: '100vh', overflow: 'hidden', ...style }}
+      style={{ height: '100vh', ...style }}
     >
-      <Spin spinning={loading} size="large" tip="加载中..." style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Spin spinning={loading} size="large" tip="加载中..." style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {children}
       </Spin>
     </div>
