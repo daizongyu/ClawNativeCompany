@@ -70,7 +70,11 @@ const ChannelChat: React.FC = () => {
       const res = await messageApi.listByChannel(id);
       if (res.code === 0) {
         // 支持两种返回格式: list 或 items
-        const messageList = res.data?.list || res.data?.items || [];
+        let messageList = res.data?.list || res.data?.items || [];
+        // 按时间正序排列（最早的消息在前面，最新的在后面）
+        messageList = messageList.sort((a: Message, b: Message) => {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
         setMessages(messageList);
       }
     } catch (error) {
@@ -231,13 +235,14 @@ const ChannelChat: React.FC = () => {
     setMentionVisible(false);
   };
 
-  // 处理选择员工
-  const handleSelectMention = (employee: { id: string; name: string }) => {
+  // 处理选择成员
+  const handleSelectMention = (member: { employee_id: string; employee_name?: string; employee?: { name: string } }) => {
     if (mentionStartIndex === -1) return;
 
     const beforeMention = inputValue.slice(0, mentionStartIndex);
     const afterMention = inputValue.slice(mentionStartIndex + mentionKeyword.length + 1);
-    const newValue = `${beforeMention}@${employee.name} ${afterMention}`;
+    const memberName = member.employee_name || member.employee?.name || '未知用户';
+    const newValue = `${beforeMention}@${memberName} ${afterMention}`;
 
     setInputValue(newValue);
     setMentionVisible(false);
@@ -268,7 +273,7 @@ const ChannelChat: React.FC = () => {
       loading={loading}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
     >
-      {/* 头部 */}
+      {/* 头部 - 固定在顶部 */}
       <div
         style={{
           padding: '16px 24px',
@@ -277,6 +282,9 @@ const ChannelChat: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           background: '#fff',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
         }}
         data-testid="channel-chat-header"
       >
@@ -313,13 +321,15 @@ const ChannelChat: React.FC = () => {
         </Space>
       </div>
 
-      {/* 消息列表 */}
+      {/* 消息列表 - 可滚动区域 */}
       <div
         style={{
           flex: 1,
-          overflow: 'auto',
+          overflowY: 'auto',
+          overflowX: 'hidden',
           padding: '24px',
           background: '#f5f5f5',
+          minHeight: 0,
         }}
         data-testid="channel-chat-messages"
       >
@@ -363,13 +373,16 @@ const ChannelChat: React.FC = () => {
         )}
       </div>
 
-      {/* 输入框 */}
+      {/* 输入框 - 固定在底部 */}
       <div
         style={{
           padding: '16px 24px',
           borderTop: '1px solid #e8e8e8',
           background: '#fff',
-          position: 'relative',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 100,
+          flexShrink: 0,
         }}
         data-testid="channel-chat-input-area"
       >
@@ -377,10 +390,12 @@ const ChannelChat: React.FC = () => {
         <MentionSelect
           visible={mentionVisible}
           keyword={mentionKeyword}
+          members={members}
+          currentUserId={user?.id}
           onSelect={handleSelectMention}
           onCancel={() => setMentionVisible(false)}
         />
-        <Space style={{ width: '100%' }} size="middle">
+        <div style={{ display: 'flex', width: '100%', gap: '12px' }}>
           <TextArea
             ref={inputRef}
             value={inputValue}
@@ -403,7 +418,7 @@ const ChannelChat: React.FC = () => {
           >
             发送
           </Button>
-        </Space>
+        </div>
       </div>
 
       {/* 频道详情弹窗 */}

@@ -1,60 +1,63 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { List, Avatar, Spin } from 'antd';
+import React, { useEffect, useRef } from 'react';
+import { List, Avatar } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
-import { employeeApi } from '../../api/employee';
 
-interface Employee {
-  id: string;
-  name: string;
-  email: string;
-  type: 'human' | 'agent';
-  avatar?: string;
+interface Member {
+  employee_id: string;
+  employee_name?: string;
+  email?: string;
+  role?: string;
+  employee?: {
+    id: string;
+    name: string;
+    email: string;
+    type: string;
+  };
 }
 
 interface MentionSelectProps {
   visible: boolean;
   keyword: string;
-  onSelect: (employee: Employee) => void;
+  members: Member[];
+  currentUserId?: string;
+  onSelect: (member: Member) => void;
   onCancel: () => void;
 }
 
 const MentionSelect: React.FC<MentionSelectProps> = ({
   visible,
   keyword,
+  members,
+  currentUserId,
   onSelect,
   onCancel,
 }) => {
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 搜索员工
-  useEffect(() => {
-    if (!visible) return;
+  // 获取成员显示名称
+  const getMemberName = (member: Member) => {
+    return member.employee_name || member.employee?.name || member.employee_id;
+  };
 
-    const searchEmployees = async () => {
-      setLoading(true);
-      try {
-        const res = await employeeApi.list({
-          page: 1,
-          pageSize: 10,
-          keyword: keyword || undefined,
-        });
-        if (res.code === 0) {
-          const list = res.data?.list || res.data?.items || [];
-          setEmployees(list);
-        }
-      } catch (error) {
-        console.error('搜索员工失败:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // 获取成员邮箱
+  const getMemberEmail = (member: Member) => {
+    return member.email || member.employee?.email || '';
+  };
 
-    // 防抖搜索
-    const timer = setTimeout(searchEmployees, 200);
-    return () => clearTimeout(timer);
-  }, [visible, keyword]);
+  // 过滤成员列表（排除当前用户）
+  const filteredMembers = members.filter((member) => {
+    // 排除当前用户
+    if (currentUserId && member.employee_id === currentUserId) return false;
+    // 关键词过滤
+    if (!keyword) return true;
+    const searchLower = keyword.toLowerCase();
+    const name = getMemberName(member);
+    const email = getMemberEmail(member);
+    return (
+      name.toLowerCase().includes(searchLower) ||
+      email.toLowerCase().includes(searchLower)
+    );
+  });
 
   // 点击外部关闭
   useEffect(() => {
@@ -93,45 +96,41 @@ const MentionSelect: React.FC<MentionSelectProps> = ({
       }}
       data-testid="mention-select"
     >
-      {loading ? (
-        <div style={{ padding: 20, textAlign: 'center' }}>
-          <Spin size="small" />
-        </div>
-      ) : employees.length === 0 ? (
+      {filteredMembers.length === 0 ? (
         <div style={{ padding: 20, textAlign: 'center', color: '#999' }}>
-          未找到匹配的员工
+          未找到匹配的成员
         </div>
       ) : (
         <List
           size="small"
-          dataSource={employees}
-          renderItem={(employee) => (
+          dataSource={filteredMembers}
+          renderItem={(member) => (
             <List.Item
               style={{
                 cursor: 'pointer',
                 padding: '8px 16px',
                 transition: 'background 0.2s',
               }}
-              onClick={() => onSelect(employee)}
+              onClick={() => onSelect(member)}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLElement).style.background = '#f5f5f5';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLElement).style.background = 'transparent';
               }}
-              data-testid={`mention-option-${employee.id}`}
+              data-testid={`mention-option-${member.employee_id}`}
             >
               <List.Item.Meta
                 avatar={
                   <Avatar
                     icon={<UserOutlined />}
                     style={{
-                      backgroundColor: employee.type === 'agent' ? '#87d068' : '#1890ff',
+                      backgroundColor: '#1890ff',
                     }}
                   />
                 }
-                title={employee.name}
-                description={employee.email}
+                title={getMemberName(member)}
+                description={getMemberEmail(member)}
               />
             </List.Item>
           )}
