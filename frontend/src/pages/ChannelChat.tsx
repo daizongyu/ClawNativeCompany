@@ -241,7 +241,7 @@ const ChannelChat: React.FC = () => {
 
     const beforeMention = inputValue.slice(0, mentionStartIndex);
     const afterMention = inputValue.slice(mentionStartIndex + mentionKeyword.length + 1);
-    const memberName = member.employee_name || member.employee?.name || '未知用户';
+    const memberName = member.employee_name || member.employee?.name || member.employee_id;
     const newValue = `${beforeMention}@${memberName} ${afterMention}`;
 
     setInputValue(newValue);
