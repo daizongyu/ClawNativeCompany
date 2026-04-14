@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, ReloadOutlined, CheckCircleOutlined,
-  DeleteOutlined, UserOutlined, InboxOutlined, TeamOutlined
+  DeleteOutlined, InboxOutlined, TeamOutlined, StopOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { taskApi } from '../api/task';
@@ -119,6 +119,11 @@ const Tasks: React.FC = () => {
   };
 
   const handleEdit = (record: Task) => {
+    // 已完成的任务不能编辑
+    if (record.status === 'completed') {
+      message.warning('已完成的任务不能编辑');
+      return;
+    }
     setEditingTask(record);
     form.setFieldsValue({
       ...record,
@@ -162,6 +167,21 @@ const Tasks: React.FC = () => {
     }
   };
 
+  const handleCancel = async (id: string) => {
+    try {
+      const res = await taskApi.cancel(id);
+      if (res.code === 0) {
+        message.success('任务已取消');
+        fetchTasks();
+      } else {
+        message.error(res.message || '取消失败');
+      }
+    } catch (error) {
+      console.error('取消任务失败:', error);
+      message.error('取消失败');
+    }
+  };
+
   const handleClaim = async (taskId: string) => {
     try {
       const res = await taskApi.claim(taskId);
@@ -186,7 +206,8 @@ const Tasks: React.FC = () => {
       };
 
       if (values.due_date) {
-        taskData.due_date = values.due_date.format('YYYY-MM-DD');
+        // 使用带时间的格式
+        taskData.due_date = values.due_date.format('YYYY-MM-DDTHH:mm:ss');
       }
 
       // 根据指派模式处理 assignee_id
@@ -282,7 +303,7 @@ const Tasks: React.FC = () => {
       title: '截止时间',
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD') : '-',
+      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '操作',
@@ -292,10 +313,12 @@ const Tasks: React.FC = () => {
           <Button type="link" size="small" onClick={() => handleView(taskRecord)}>
             查看
           </Button>
-          <Button type="link" size="small" onClick={() => handleEdit(taskRecord)}>
-            编辑
-          </Button>
-          {!taskRecord.assignee_id && (
+          {taskRecord.status !== 'completed' && (
+            <Button type="link" size="small" onClick={() => handleEdit(taskRecord)}>
+              编辑
+            </Button>
+          )}
+          {!taskRecord.assignee_id && taskRecord.status !== 'cancelled' && (
             <Button
               type="link"
               size="small"
@@ -305,7 +328,7 @@ const Tasks: React.FC = () => {
               认领
             </Button>
           )}
-          {taskRecord.status !== 'completed' && taskRecord.assignee_id === user?.id && (
+          {taskRecord.status !== 'completed' && taskRecord.status !== 'cancelled' && taskRecord.assignee_id === user?.id && (
             <Button
               type="link"
               size="small"
@@ -314,6 +337,19 @@ const Tasks: React.FC = () => {
             >
               完成
             </Button>
+          )}
+          {taskRecord.status !== 'completed' && taskRecord.status !== 'cancelled' && (
+            <Popconfirm
+              title="确认取消"
+              description="确定要取消这个任务吗？"
+              onConfirm={() => handleCancel(taskRecord.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button type="link" size="small" icon={<StopOutlined />}>
+                取消
+              </Button>
+            </Popconfirm>
           )}
           <Popconfirm
             title="确认删除"
@@ -333,7 +369,11 @@ const Tasks: React.FC = () => {
 
   // 统计任务数量
   const myTasksCount = tasks.filter(t => t.assignee_id === user?.id).length;
-  const unclaimedCount = tasks.filter(t => !t.assignee_id).length;
+  const unclaimedCount = tasks.filter(t => !t.assignee_id && t.status !== 'cancelled').length;
+  const pendingCount = tasks.filter(t => t.status === 'pending').length;
+  const inProgressCount = tasks.filter(t => t.status === 'in_progress').length;
+  const completedCount = tasks.filter(t => t.status === 'completed').length;
+  const cancelledCount = tasks.filter(t => t.status === 'cancelled').length;
 
   return (
     <PageContainer
@@ -344,25 +384,47 @@ const Tasks: React.FC = () => {
       <Card>
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
+          <Col span={4}>
             <Statistic
               title="总任务"
               value={tasks.length}
               prefix={<TeamOutlined />}
             />
           </Col>
-          <Col span={6}>
+          <Col span={4}>
             <Statistic
-              title="我的任务"
-              value={myTasksCount}
-              prefix={<UserOutlined />}
+              title="待处理"
+              value={pendingCount}
+              valueStyle={{ color: '#cf1322' }}
             />
           </Col>
-          <Col span={6}>
+          <Col span={4}>
+            <Statistic
+              title="进行中"
+              value={inProgressCount}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Col>
+          <Col span={4}>
+            <Statistic
+              title="已完成"
+              value={completedCount}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Col>
+          <Col span={4}>
+            <Statistic
+              title="已取消"
+              value={cancelledCount}
+              valueStyle={{ color: '#999' }}
+            />
+          </Col>
+          <Col span={4}>
             <Statistic
               title="待认领"
               value={unclaimedCount}
               prefix={<InboxOutlined />}
+              valueStyle={{ color: '#faad14' }}
             />
           </Col>
         </Row>
@@ -466,7 +528,7 @@ const Tasks: React.FC = () => {
           layout="vertical"
           initialValues={{ priority: 'medium' }}
         >
-          {/* 指派模式选择 */}
+          {/* 指派模式选择 - 仅新建时显示 */}
           {!editingTask && (
             <Form.Item label="指派模式" required>
               <Radio.Group
@@ -508,14 +570,14 @@ const Tasks: React.FC = () => {
             </Select>
           </Form.Item>
 
-          {/* 执行人选择 - 仅在指派模式下显示 */}
-          {assignmentMode === 'assign' && (
+          {/* 执行人选择 - 仅在指派模式下显示（新建时）或编辑时显示 */}
+          {(!editingTask && assignmentMode === 'assign') || editingTask ? (
             <Form.Item
               name="assignee_id"
               label="执行人"
-              rules={[{ required: true, message: '请选择执行人' }]}
+              rules={[{ required: false }]} // 编辑时可以不选
             >
-              <Select placeholder="请选择执行人" showSearch optionFilterProp="children">
+              <Select placeholder="请选择执行人" showSearch optionFilterProp="children" allowClear>
                 {employees.map((emp) => (
                   <Option key={emp.id} value={emp.id}>
                     {emp.name} ({emp.email})
@@ -523,10 +585,15 @@ const Tasks: React.FC = () => {
                 ))}
               </Select>
             </Form.Item>
-          )}
+          ) : null}
 
           <Form.Item name="due_date" label="截止时间">
-            <DatePicker style={{ width: '100%' }} placeholder="请选择截止时间" />
+            <DatePicker
+              style={{ width: '100%' }}
+              placeholder="请选择截止时间"
+              showTime={{ format: 'HH:mm' }}
+              format="YYYY-MM-DD HH:mm"
+            />
           </Form.Item>
         </Form>
       </Modal>
@@ -568,7 +635,7 @@ const Tasks: React.FC = () => {
             <p>
               <strong>截止时间：</strong>
               {viewingTask.due_date
-                ? dayjs(viewingTask.due_date).format('YYYY-MM-DD')
+                ? dayjs(viewingTask.due_date).format('YYYY-MM-DD HH:mm')
                 : '-'}
             </p>
             <p>

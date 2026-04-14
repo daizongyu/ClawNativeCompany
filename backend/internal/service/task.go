@@ -55,9 +55,10 @@ type CreateTaskRequest struct {
 // UpdateTaskRequest 更新任务请求
 type UpdateTaskRequest struct {
 	Title       string   `json:"title" validate:"omitempty,min=2,max=200"`
-	Description string   `json:"description" validate:"max:2000"`
-	Priority  string   `json:"priority" validate:"omitempty,oneof=low medium high urgent"`
-	DueDate   *string  `json:"due_date,omitempty"`
+	Description string   `json:"description" validate:"max=2000"`
+	Priority    string   `json:"priority" validate:"omitempty,oneof=low medium high urgent"`
+	DueDate     *string  `json:"due_date,omitempty"`
+	AssigneeID  *string  `json:"assignee_id,omitempty"`
 }
 
 // ListTaskRequest 任务列表请求
@@ -149,6 +150,11 @@ func (s *TaskService) Update(ctx context.Context, id string, req UpdateTaskReque
 		return nil, err
 	}
 
+	// 已完成的任务不能编辑
+	if task.Status == model.TaskStatusCompleted {
+		return nil, ErrTaskAlreadyComplete
+	}
+
 	// 更新字段
 	if req.Title != "" {
 		task.Title = req.Title
@@ -160,11 +166,28 @@ func (s *TaskService) Update(ctx context.Context, id string, req UpdateTaskReque
 		task.Priority = model.TaskPriority(req.Priority)
 	}
 	if req.DueDate != nil && *req.DueDate != "" {
-		parsed, err := time.Parse("2006-01-02", *req.DueDate)
+		// 支持多种日期格式：2006-01-02 或 2006-01-02T15:04:05
+		var parsed time.Time
+		var err error
+		if len(*req.DueDate) > 10 {
+			parsed, err = time.Parse("2006-01-02T15:04:05", *req.DueDate)
+		} else {
+			parsed, err = time.Parse("2006-01-02", *req.DueDate)
+		}
 		if err != nil {
 			return nil, errors.New("无效的截止日期格式")
 		}
 		task.DueDate = &parsed
+	}
+	// 更新执行人
+	if req.AssigneeID != nil {
+		if *req.AssigneeID == "" {
+			task.AssigneeID = nil
+			task.Status = model.TaskStatusPending
+		} else {
+			task.AssigneeID = req.AssigneeID
+			task.Status = model.TaskStatusInProgress
+		}
 	}
 
 	if err := s.taskRepo.Update(ctx, task); err != nil {
