@@ -3,6 +3,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -90,15 +91,29 @@ func (h *TaskHandler) List(c *gin.Context) {
 	pageSize := utils.GetIntQuery(c, "page_size", 20)
 	status := c.Query("status")
 	priority := c.Query("priority")
+	keyword := c.Query("keyword")
+	mine := c.Query("mine") == "true"
+	unclaimed := c.Query("unclaimed") == "true"
 
-	req := service.ListTaskRequest{
-		Page:     page,
-		PageSize: pageSize,
-		Status:   status,
-		Priority: priority,
+	// 将当前用户ID放入context（用于mine筛选）
+	ctx := c.Request.Context()
+	if userID, exists := c.Get("employee_id"); exists {
+		if id, ok := userID.(string); ok {
+			ctx = context.WithValue(ctx, "employee_id", id)
+		}
 	}
 
-	resp, err := h.taskService.List(c.Request.Context(), req)
+	req := service.ListTaskRequest{
+		Page:      page,
+		PageSize:  pageSize,
+		Status:    status,
+		Priority:  priority,
+		Keyword:   keyword,
+		Mine:      mine,
+		Unclaimed: unclaimed,
+	}
+
+	resp, err := h.taskService.List(ctx, req)
 	if err != nil {
 		utils.Error(c, http.StatusInternalServerError, err.Error())
 		return

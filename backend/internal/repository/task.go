@@ -22,12 +22,22 @@ type TaskStats struct {
 }
 
 // TaskRepository 任务 Repository 接口
+// ListTaskFilter 任务列表筛选条件
+type ListTaskFilter struct {
+	Status      string
+	Priority    string
+	AssigneeID  string
+	Unclaimed   bool
+	Keyword     string
+}
+
 type TaskRepository interface {
 	Create(ctx context.Context, task *model.Task) error
 	GetByID(ctx context.Context, id string) (*model.Task, error)
 	Update(ctx context.Context, task *model.Task) error
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, page, pageSize int) ([]*model.Task, int64, error)
+	ListWithFilter(ctx context.Context, filter ListTaskFilter, page, pageSize int) ([]*model.Task, int64, error)
 	ListByAssignee(ctx context.Context, assigneeID string, page, pageSize int) ([]*model.Task, int64, error)
 	ListByStatus(ctx context.Context, status model.TaskStatus, page, pageSize int) ([]*model.Task, int64, error)
 	ListByWorkflow(ctx context.Context, workflowID string, page, pageSize int) ([]*model.Task, int64, error)
@@ -84,6 +94,48 @@ func (r *taskRepo) List(ctx context.Context, page, pageSize int) ([]*model.Task,
 	var total int64
 
 	db := r.db.WithContext(ctx).Model(&model.Task{})
+	db.Count(&total)
+
+	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return tasks, total, nil
+}
+
+// ListWithFilter 根据筛选条件获取任务列表
+func (r *taskRepo) ListWithFilter(ctx context.Context, filter ListTaskFilter, page, pageSize int) ([]*model.Task, int64, error) {
+	var tasks []*model.Task
+	var total int64
+
+	db := r.db.WithContext(ctx).Model(&model.Task{})
+
+	// 状态筛选
+	if filter.Status != "" {
+		db = db.Where("status = ?", filter.Status)
+	}
+
+	// 优先级筛选
+	if filter.Priority != "" {
+		db = db.Where("priority = ?", filter.Priority)
+	}
+
+	// 指派给特定员工
+	if filter.AssigneeID != "" {
+		db = db.Where("assignee_id = ?", filter.AssigneeID)
+	}
+
+	// 待认领任务（assignee_id 为空）
+	if filter.Unclaimed {
+		db = db.Where("assignee_id IS NULL OR assignee_id = ''")
+	}
+
+	// 关键词搜索
+	if filter.Keyword != "" {
+		db = db.Where("title LIKE ? OR description LIKE ?", "%"+filter.Keyword+"%", "%"+filter.Keyword+"%")
+	}
+
 	db.Count(&total)
 
 	err := db.Preload("Creator").Preload("Assignee").Order("created_at DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&tasks).Error

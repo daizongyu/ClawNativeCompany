@@ -62,10 +62,13 @@ type UpdateTaskRequest struct {
 
 // ListTaskRequest 任务列表请求
 type ListTaskRequest struct {
-	Page     int    `json:"page" validate:"min=1"`
-	PageSize int    `json:"page_size" validate:"min=1,max=100"`
-	Status   string `json:"status,omitempty"`
-	Priority string `json:"priority,omitempty"`
+	Page      int    `json:"page" validate:"min=1"`
+	PageSize  int    `json:"page_size" validate:"min=1,max=100"`
+	Status    string `json:"status,omitempty"`
+	Priority  string `json:"priority,omitempty"`
+	Mine      bool   `json:"mine,omitempty"`
+	Unclaimed bool   `json:"unclaimed,omitempty"`
+	Keyword   string `json:"keyword,omitempty"`
 }
 
 // TaskResponse 任务响应（使用 model.TaskResponse）
@@ -190,9 +193,28 @@ type ListTaskResponse struct {
 	Pagination utils.Pagination      `json:"pagination"`
 }
 
-// List 获取任务列表
+// List 获取任务列表（支持筛选）
 func (s *TaskService) List(ctx context.Context, req ListTaskRequest) (*ListTaskResponse, error) {
-	tasks, total, err := s.taskRepo.List(ctx, req.Page, req.PageSize)
+	filter := repository.ListTaskFilter{
+		Status:   req.Status,
+		Priority: req.Priority,
+		Keyword:  req.Keyword,
+	}
+
+	// 处理 mine 筛选（当前用户的任务）
+	if req.Mine {
+		// 从 context 获取当前用户ID
+		if userID, ok := ctx.Value("employee_id").(string); ok && userID != "" {
+			filter.AssigneeID = userID
+		}
+	}
+
+	// 处理 unclaimed 筛选（待认领任务）
+	if req.Unclaimed {
+		filter.Unclaimed = true
+	}
+
+	tasks, total, err := s.taskRepo.ListWithFilter(ctx, filter, req.Page, req.PageSize)
 	if err != nil {
 		return nil, err
 	}

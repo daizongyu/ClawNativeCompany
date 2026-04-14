@@ -1,8 +1,16 @@
 import request from '../utils/request';
 
 export const taskApi = {
-  list: (page: number, pageSize: number): Promise<any> => {
-    return request.get(`/tasks?page=${page}&page_size=${pageSize}`);
+  list: (params: any): Promise<any> => {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.append('page', params.page.toString());
+    if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+    if (params.status) queryParams.append('status', params.status);
+    if (params.priority) queryParams.append('priority', params.priority);
+    if (params.keyword) queryParams.append('keyword', params.keyword);
+    if (params.mine) queryParams.append('mine', 'true');
+    if (params.unclaimed) queryParams.append('unclaimed', 'true');
+    return request.get(`/tasks?${queryParams.toString()}`);
   },
 
   create: (data: any): Promise<any> => {
