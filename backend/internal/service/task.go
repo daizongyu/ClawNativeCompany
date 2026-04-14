@@ -45,11 +45,11 @@ func NewTaskService() *TaskService {
 
 // CreateTaskRequest 创建任务请求
 type CreateTaskRequest struct {
-	Title       string    `json:"title" validate:"required,min=2,max=200"`
-	Description string    `json:"description" validate:"max=2000"`
-	Priority  string    `json:"priority" validate:"required,oneof=low medium high urgent"`
-	AssigneeID *string  `json:"assignee_id,omitempty"`
-	DueDate    *string  `json:"due_date,omitempty"`
+	Title       string   `json:"title" validate:"required,min=2,max=200"`
+	Description string   `json:"description" validate:"max=2000"`
+	Priority    string   `json:"priority" validate:"required,oneof=low medium high urgent"`
+	AssigneeID  *string  `json:"assignee_id,omitempty"`
+	DueDate     *string  `json:"due_date,omitempty"`
 }
 
 // UpdateTaskRequest 更新任务请求
@@ -93,7 +93,14 @@ func (s *TaskService) Create(ctx context.Context, req CreateTaskRequest, creator
 	// 解析截止日期
 	var dueDate *time.Time
 	if req.DueDate != nil && *req.DueDate != "" {
-		parsed, err := time.Parse("2006-01-02", *req.DueDate)
+		// 支持多种日期格式：2006-01-02 或 2006-01-02T15:04:05
+		var parsed time.Time
+		var err error
+		if len(*req.DueDate) > 10 {
+			parsed, err = time.Parse("2006-01-02T15:04:05", *req.DueDate)
+		} else {
+			parsed, err = time.Parse("2006-01-02", *req.DueDate)
+		}
 		if err != nil {
 			return nil, errors.New("无效的截止日期格式")
 		}
