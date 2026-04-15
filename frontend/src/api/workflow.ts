@@ -28,7 +28,7 @@ export const workflowApi = {
   },
 
   updateStatus: (id: string, status: string): Promise<any> => {
-    return request.patch(`/workflows/${id}/status`, { status });
+    return request.put(`/workflows/${id}/status`, { status });
   },
 
   trigger: (id: string, input: any): Promise<any> => {

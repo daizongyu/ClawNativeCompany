@@ -129,8 +129,19 @@ const Workflows: React.FC = () => {
     try {
       const values = await form.validateFields();
 
+      // 构建完整的工作流数据
+      const workflowData = {
+        ...values,
+        trigger_config: values.trigger_config || {},
+        steps: values.steps || [
+          { id: 'start', name: '开始', type: 'start', config: {}, order: 0 },
+          { id: 'end', name: '结束', type: 'end', config: {}, order: 1 }
+        ],
+        status: 'active'
+      };
+
       if (editingWorkflow) {
-        const res = await workflowApi.update(editingWorkflow.id, values);
+        const res = await workflowApi.update(editingWorkflow.id, workflowData);
         if (res.code === 0) {
           message.success('更新成功');
           setModalVisible(false);
@@ -139,7 +150,7 @@ const Workflows: React.FC = () => {
           message.error(res.message || '更新失败');
         }
       } else {
-        const res = await workflowApi.create(values);
+        const res = await workflowApi.create(workflowData);
         if (res.code === 0) {
           message.success('创建成功');
           setModalVisible(false);

@@ -10,7 +10,7 @@ import Employees from './pages/Employees';
 import Channels from './pages/Channels';
 import ChannelChat from './pages/ChannelChat';
 import Tasks from './pages/Tasks';
-import Workflows from './pages/Workflows';
+import Workflows from './pages/Workflows/index';
 import WorkflowEditor from './pages/WorkflowEditor';
 import ExecutionHistory from './pages/ExecutionHistory';
 
