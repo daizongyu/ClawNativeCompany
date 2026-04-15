@@ -11,6 +11,8 @@ import Channels from './pages/Channels';
 import ChannelChat from './pages/ChannelChat';
 import Tasks from './pages/Tasks';
 import Workflows from './pages/Workflows';
+import WorkflowEditor from './pages/WorkflowEditor';
+import ExecutionHistory from './pages/ExecutionHistory';
 
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -104,6 +106,22 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <LayoutRoute element={<Workflows />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows/editor/:id?"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<WorkflowEditor />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/workflows/executions/:workflowId?"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<ExecutionHistory />} />
                 </ProtectedRoute>
               }
             />
