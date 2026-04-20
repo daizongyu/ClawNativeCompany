@@ -68,6 +68,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// 获取数据库实例
+	db := database.GetDB()
+
 	// 初始化 WebSocket 管理器
 	websocket.Init()
 
@@ -83,9 +86,11 @@ func main() {
 	taskRepo := repository.NewTaskRepository()
 	channelRepo := repository.NewChannelRepository()
 	workflowRepo := repository.NewWorkflowRepository()
+	gatewayConfigRepo := repository.NewGatewayConfigRepository(db)
 
 	// 创建 Service 实例
 	dashboardService := service.NewDashboardService(employeeRepo, taskRepo, channelRepo, workflowRepo)
+	gatewayConfigService := service.NewGatewayConfigService(gatewayConfigRepo)
 
 	// 创建 Handler 实例
 	authHandler := handler.NewAuthHandler()
@@ -97,6 +102,7 @@ func main() {
 	agentHandler := handler.NewAgentHandler()
 	webhookHandler := handler.NewWebhookHandler()
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+	gatewayConfigHandler := handler.NewGatewayConfigHandler(gatewayConfigService)
 	wsManager := websocket.GetManager()
 
 	// 创建 Gin 引擎
@@ -134,6 +140,9 @@ func main() {
 
 			// 任务路由
 			taskHandler.RegisterRoutes(protected)
+
+			// Gateway 配置路由
+			gatewayConfigHandler.RegisterRoutes(protected)
 
 			// Dashboard 路由
 			protected.GET("/dashboard/stats", dashboardHandler.GetStats)

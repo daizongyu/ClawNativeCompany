@@ -1,33 +1,89 @@
 import request from '../utils/request';
 
+export interface NotificationChannels {
+  email: boolean;
+  webhook: boolean;
+  internal: boolean;
+}
+
+export interface EventNotifications {
+  task_assigned: boolean;
+  task_completed: boolean;
+  task_cancelled: boolean;
+  workflow_triggered: boolean;
+  workflow_completed: boolean;
+  workflow_failed: boolean;
+  mention_received: boolean;
+  channel_message: boolean;
+}
+
+export interface NotificationPreferences {
+  channels: NotificationChannels;
+  events: EventNotifications;
+}
+
 export interface Employee {
   id: string;
-  name: string;
+  username: string;
+  display_name: string;
+  name: string;  // 兼容旧字段
   email: string;
   type: 'human' | 'agent';
   role: string;
   skills: string[];
   status: 'active' | 'inactive';
   api_key?: string;
+
+  // 扩展资料
+  avatar?: string;
+  department?: string;
+  position?: string;
+  phone?: string;
+
+  // 通知偏好
+  notification_prefs?: NotificationPreferences;
+
   created_at: string;
   updated_at: string;
 }
 
 export interface CreateEmployeeRequest {
-  name: string;
+  username: string;
+  display_name: string;
+  name?: string;  // 兼容旧字段
   email: string;
   password?: string;
   type: 'human' | 'agent';
   role?: string;
   skills?: string[];
+
+  // 扩展资料
+  avatar?: string;
+  department?: string;
+  position?: string;
+  phone?: string;
+
+  // 通知偏好
+  notification_prefs?: NotificationPreferences;
 }
 
 export interface UpdateEmployeeRequest {
+  username?: string;
+  display_name?: string;
   name?: string;
   email?: string;
   role?: string;
   skills?: string[];
   status?: 'active' | 'inactive';
+
+  // 扩展资料
+  avatar?: string;
+  department?: string;
+  position?: string;
+  phone?: string;
+
+  // 通知偏好
+  notification_prefs?: NotificationPreferences;
 }
 
 export interface ListEmployeesParams {
@@ -37,6 +93,11 @@ export interface ListEmployeesParams {
   status?: string;
   role?: string;
   keyword?: string;
+}
+
+export interface UpdateNotificationPrefsRequest {
+  channels: NotificationChannels;
+  events: EventNotifications;
 }
 
 export const employeeApi = {
@@ -75,6 +136,11 @@ export const employeeApi = {
   search: (skills: string[]): Promise<any> => {
     const params = skills.map(s => `skills=${encodeURIComponent(s)}`).join('&');
     return request.get(`/employees/search?${params}`);
+  },
+
+  // 更新通知偏好
+  updateNotificationPrefs: (id: string, data: UpdateNotificationPrefsRequest): Promise<any> => {
+    return request.put(`/employees/${id}/notification-prefs`, data);
   },
 
   // 生成 API Key

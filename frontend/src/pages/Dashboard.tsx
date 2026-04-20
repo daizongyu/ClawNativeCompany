@@ -8,8 +8,8 @@ import {
   NodeIndexOutlined,
   ArrowUpOutlined
 } from '@ant-design/icons';
-import { dashboardApi } from '../api/dashboard';
-import { taskApi } from '../api/task';
+import { dashboardApi } from '../services/dashboard';
+import { taskApi } from '../services/task';
 import { Link } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { PageContainer } from '../components/common';

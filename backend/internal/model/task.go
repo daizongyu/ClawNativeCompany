@@ -48,6 +48,7 @@ type Task struct {
 	CreatorID   string       `gorm:"size:36;index;not null" json:"creator_id"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
 	CompletedAt *time.Time   `json:"completed_at,omitempty"`
+	Result      string       `gorm:"type:text" json:"result"` // 任务完成结果
 	Assignee    *Employee    `gorm:"foreignKey:AssigneeID" json:"assignee,omitempty"`
 	Creator     Employee     `gorm:"foreignKey:CreatorID" json:"creator,omitempty"`
 }

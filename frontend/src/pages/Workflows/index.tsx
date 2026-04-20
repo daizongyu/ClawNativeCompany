@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Button, Row, Col, Modal, Form, Input, Select, message, Empty, Space, Tabs, Statistic } from 'antd';
 import { PlusOutlined, ReloadOutlined, PlayCircleOutlined, CheckCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { workflowApi } from '../../api/workflow';
+import { workflowApi } from '../../services/workflow';
 import { PageContainer } from '../../components/common';
 import { WorkflowCard } from './components/WorkflowCard';
 

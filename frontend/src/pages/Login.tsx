@@ -3,7 +3,7 @@ import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth';
-import { authApi } from '../api/auth';
+import { authApi } from '../services/auth';
 import { PageContainer } from '../components/common';
 
 const Login: React.FC = () => {

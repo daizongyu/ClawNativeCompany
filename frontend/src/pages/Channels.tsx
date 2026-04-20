@@ -3,7 +3,7 @@ import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconf
 import { PlusOutlined, EditOutlined, DeleteOutlined, MessageOutlined, UserAddOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { channelApi, Channel, CreateChannelRequest } from '../api/channel';
+import { channelApi, Channel, CreateChannelRequest } from '../services/channel';
 import { PageContainer } from '../components/common';
 
 const { Option } = Select;

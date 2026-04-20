@@ -285,6 +285,35 @@ func (h *EmployeeHandler) GetMe(c *gin.Context) {
 	utils.SuccessWithData(c, resp)
 }
 
+// UpdateNotificationPrefs 更新通知偏好
+// PUT /api/v1/employees/:id/notification-prefs
+func (h *EmployeeHandler) UpdateNotificationPrefs(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		utils.ValidationError(c, "员工 ID 不能为空")
+		return
+	}
+
+	var req service.UpdateNotificationPrefsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationError(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	resp, err := h.employeeService.UpdateNotificationPrefs(c.Request.Context(), id, req)
+	if err != nil {
+		switch err {
+		case service.ErrEmployeeNotFound:
+			utils.Error(c, http.StatusNotFound, "员工不存在")
+		default:
+			utils.Error(c, http.StatusInternalServerError, "更新通知偏好失败")
+		}
+		return
+	}
+
+	utils.SuccessWithData(c, resp)
+}
+
 // RegisterRoutes 注册路由
 func (h *EmployeeHandler) RegisterRoutes(r *gin.RouterGroup) {
 	employees := r.Group("/employees")
@@ -296,6 +325,7 @@ func (h *EmployeeHandler) RegisterRoutes(r *gin.RouterGroup) {
 		employees.GET("/:id", h.Get)
 		employees.PUT("/:id", h.Update)
 		employees.DELETE("/:id", h.Delete)
+		employees.PUT("/:id/notification-prefs", h.UpdateNotificationPrefs)
 		employees.POST("/:id/apikey", h.GenerateAPIKey)
 		employees.PUT("/:id/apikey", h.ResetAPIKey)
 	}

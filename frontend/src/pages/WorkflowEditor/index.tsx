@@ -19,7 +19,7 @@ import {
   AppstoreOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
-import { workflowApi } from '../../api/workflow';
+import { workflowApi } from '../../services/workflow';
 import { PageContainer } from '../../components/common';
 import { TriggerConfigPanel } from './components/TriggerConfigPanel';
 import { StepEditor } from './components/StepEditor';

@@ -8,8 +8,8 @@ import {
   DeleteOutlined, InboxOutlined, TeamOutlined, StopOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { taskApi } from '../api/task';
-import { employeeApi } from '../api/employee';
+import { taskApi } from '../services/task';
+import { employeeApi } from '../services/employee';
 import { PageContainer } from '../components/common';
 import { useAuthStore } from '../stores/auth';
 

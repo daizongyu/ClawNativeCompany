@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import { employeeApi, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../api/employee';
+import { employeeApi, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../services/employee';
 import { PageContainer } from '../components/common';
 
 const { Option } = Select;

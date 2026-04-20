@@ -124,22 +124,22 @@ func (g *OutboundGateway) PushMessage(ctx context.Context, webhookName string, m
 }
 
 // PushWorkflowEvent 推送工作流事件
-func (g *OutboundGateway) PushWorkflowEvent(ctx context.Context, webhookName string, event string, instance *model.WorkflowInstance, workflow *model.Workflow) error {
+func (g *OutboundGateway) PushWorkflowEvent(ctx context.Context, webhookName string, event string, execution *model.WorkflowExecution, workflow *model.Workflow) error {
 	msg := OutboundMessage{
 		Type:      "workflow",
 		Event:     event,
 		Timestamp: time.Now().Unix(),
 		Data: map[string]interface{}{
-			"instance_id": instance.ID,
+			"execution_id": execution.ID,
 			"workflow_id": workflow.ID,
 			"workflow_name": workflow.Name,
-			"status":      instance.Status,
-			"created_at":  instance.CreatedAt,
+			"status":      execution.Status,
+			"started_at":  execution.StartedAt,
 		},
 	}
 
-	if instance.CompletedAt != nil {
-		msg.Data["completed_at"] = instance.CompletedAt
+	if execution.CompletedAt != nil {
+		msg.Data["completed_at"] = execution.CompletedAt
 	}
 
 	return g.send(ctx, webhookName, msg)

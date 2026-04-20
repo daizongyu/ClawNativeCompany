@@ -24,7 +24,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { workflowApi } from '../../api/workflow';
+import { workflowApi } from '../../services/workflow';
 import { PageContainer } from '../../components/common';
 import { ExecutionTimeline } from './components/ExecutionTimeline';
 

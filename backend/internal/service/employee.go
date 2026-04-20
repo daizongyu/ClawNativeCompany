@@ -40,35 +40,70 @@ func NewEmployeeService() *EmployeeService {
 
 // CreateEmployeeRequest 创建员工请求
 type CreateEmployeeRequest struct {
-	Name     string   `json:"name" validate:"required,min=1,max=100"`
-	Type     string   `json:"type" validate:"required,oneof=human agent"`
-	Email    string   `json:"email" validate:"required,email"`
-	Password string   `json:"password" validate:"min:6"`
-	Role     string   `json:"role"`
-	Skills   []string `json:"skills"`
+	Username    string   `json:"username" validate:"required,min=3,max=50,alphanum"`
+	DisplayName string   `json:"display_name" validate:"required,min=1,max=100"`
+	Name        string   `json:"name" validate:"required,min=1,max=100"` // 兼容旧字段
+	Type        string   `json:"type" validate:"required,oneof=human agent"`
+	Email       string   `json:"email" validate:"required,email"`
+	Password    string   `json:"password" validate:"min=6"`
+	Role        string   `json:"role"`
+	Skills      []string `json:"skills"`
+
+	// 扩展资料
+	Avatar     string `json:"avatar,omitempty"`
+	Department string `json:"department,omitempty"`
+	Position   string `json:"position,omitempty"`
+	Phone      string `json:"phone,omitempty"`
+
+	// 通知偏好
+	NotificationPrefs model.NotificationPreferences `json:"notification_prefs,omitempty"`
 }
 
 // UpdateEmployeeRequest 更新员工请求
 type UpdateEmployeeRequest struct {
-	Name   string   `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
-	Type   string   `json:"type,omitempty" validate:"omitempty,oneof=human agent"`
-	Email  string   `json:"email,omitempty" validate:"omitempty,email"`
-	Role   string   `json:"role,omitempty"`
-	Skills []string `json:"skills,omitempty"`
-	Status string   `json:"status,omitempty" validate:"omitempty,oneof=active inactive"`
+	Username    string   `json:"username,omitempty" validate:"omitempty,min=3,max=50,alphanum"`
+	DisplayName string   `json:"display_name,omitempty" validate:"omitempty,min=1,max=100"`
+	Name        string   `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Type        string   `json:"type,omitempty" validate:"omitempty,oneof=human agent"`
+	Email       string   `json:"email,omitempty" validate:"omitempty,email"`
+	Role        string   `json:"role,omitempty"`
+	Skills      []string `json:"skills,omitempty"`
+	Status      string   `json:"status,omitempty" validate:"omitempty,oneof=active inactive"`
+
+	// 扩展资料
+	Avatar     string `json:"avatar,omitempty"`
+	Department string `json:"department,omitempty"`
+	Position   string `json:"position,omitempty"`
+	Phone      string `json:"phone,omitempty"`
+
+	// 通知偏好
+	NotificationPrefs model.NotificationPreferences `json:"notification_prefs,omitempty"`
+}
+
+// UpdateNotificationPrefsRequest 更新通知偏好请求
+type UpdateNotificationPrefsRequest struct {
+	Channels model.NotificationChannels `json:"channels"`
+	Events   model.EventNotifications   `json:"events"`
 }
 
 // EmployeeResponse 员工响应
 type EmployeeResponse struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	Type       string   `json:"type"`
-	Email      string   `json:"email"`
-	Role       string   `json:"role,omitempty"`
-	Skills     []string `json:"skills"`
-	Status     string   `json:"status"`
-	LastSeenAt *string  `json:"last_seen_at,omitempty"`
-	CreatedAt  string   `json:"created_at"`
+	ID                string                        `json:"id"`
+	Username          string                        `json:"username"`
+	DisplayName       string                        `json:"display_name"`
+	Name              string                        `json:"name"` // 兼容旧字段
+	Type              string                        `json:"type"`
+	Email             string                        `json:"email"`
+	Role              string                        `json:"role,omitempty"`
+	Skills            []string                      `json:"skills"`
+	Avatar            string                        `json:"avatar,omitempty"`
+	Department        string                        `json:"department,omitempty"`
+	Position          string                        `json:"position,omitempty"`
+	Phone             string                        `json:"phone,omitempty"`
+	NotificationPrefs model.NotificationPreferences `json:"notification_prefs,omitempty"`
+	Status            string                        `json:"status"`
+	LastSeenAt        *string                       `json:"last_seen_at,omitempty"`
+	CreatedAt         string                        `json:"created_at"`
 }
 
 // ListEmployeeRequest 员工列表请求
@@ -111,15 +146,25 @@ func toEmployeeResponse(emp *model.Employee) *EmployeeResponse {
 		json.Unmarshal([]byte(emp.Skills), &skills)
 	}
 
+	// 获取通知偏好
+	notificationPrefs := emp.GetNotificationPrefs()
+
 	resp := &EmployeeResponse{
-		ID:        emp.ID,
-		Name:      emp.Name,
-		Type:      string(emp.Type),
-		Email:     emp.Email,
-		Role:      emp.Role,
-		Skills:    skills,
-		Status:    string(emp.Status),
-		CreatedAt: emp.CreatedAt.Format("2006-01-02T15:04:05"),
+		ID:                emp.ID,
+		Username:          emp.Username,
+		DisplayName:       emp.DisplayName,
+		Name:              emp.Name,
+		Type:              string(emp.Type),
+		Email:             emp.Email,
+		Role:              emp.Role,
+		Skills:            skills,
+		Avatar:            emp.Avatar,
+		Department:        emp.Department,
+		Position:          emp.Position,
+		Phone:             emp.Phone,
+		NotificationPrefs: notificationPrefs,
+		Status:            string(emp.Status),
+		CreatedAt:         emp.CreatedAt.Format("2006-01-02T15:04:05"),
 	}
 
 	if emp.LastSeenAt != nil {
@@ -154,12 +199,41 @@ func (s *EmployeeService) Create(ctx context.Context, req *CreateEmployeeRequest
 
 	// 创建员工模型
 	emp := &model.Employee{
-		Name:   req.Name,
-		Type:   empType,
-		Email:  req.Email,
-		Role:   req.Role,
-		Skills: string(skillsJSON),
-		Status: model.EmployeeStatusActive,
+		Username:    req.Username,
+		DisplayName: req.DisplayName,
+		Name:        req.Name,
+		Type:        empType,
+		Email:       req.Email,
+		Role:        req.Role,
+		Skills:      string(skillsJSON),
+		Status:      model.EmployeeStatusActive,
+	}
+
+	// 设置扩展资料
+	if req.Avatar != "" {
+		emp.Avatar = req.Avatar
+	}
+	if req.Department != "" {
+		emp.Department = req.Department
+	}
+	if req.Position != "" {
+		emp.Position = req.Position
+	}
+	if req.Phone != "" {
+		emp.Phone = req.Phone
+	}
+
+	// 设置通知偏好
+	if req.NotificationPrefs.Channels.Email || req.NotificationPrefs.Channels.Webhook || req.NotificationPrefs.Channels.Internal {
+		// 使用提供的偏好
+		if err := emp.SetNotificationPrefs(req.NotificationPrefs); err != nil {
+			logger.Warn("设置通知偏好失败", "error", err)
+		}
+	} else {
+		// 使用默认偏好
+		if err := emp.SetNotificationPrefs(model.DefaultNotificationPreferences()); err != nil {
+			logger.Warn("设置默认通知偏好失败", "error", err)
+		}
 	}
 
 	// 人类员工需要密码，Agent 可选
@@ -259,6 +333,12 @@ func (s *EmployeeService) Update(ctx context.Context, id string, req *UpdateEmpl
 	}
 
 	// 更新字段
+	if req.Username != "" {
+		emp.Username = req.Username
+	}
+	if req.DisplayName != "" {
+		emp.DisplayName = req.DisplayName
+	}
 	if req.Name != "" {
 		emp.Name = req.Name
 	}
@@ -282,6 +362,23 @@ func (s *EmployeeService) Update(ctx context.Context, id string, req *UpdateEmpl
 	if req.Skills != nil {
 		skillsJSON, _ := json.Marshal(req.Skills)
 		emp.Skills = string(skillsJSON)
+	}
+	if req.Avatar != "" {
+		emp.Avatar = req.Avatar
+	}
+	if req.Department != "" {
+		emp.Department = req.Department
+	}
+	if req.Position != "" {
+		emp.Position = req.Position
+	}
+	if req.Phone != "" {
+		emp.Phone = req.Phone
+	}
+	if req.NotificationPrefs.Channels.Email || req.NotificationPrefs.Channels.Webhook || req.NotificationPrefs.Channels.Internal {
+		if err := emp.SetNotificationPrefs(req.NotificationPrefs); err != nil {
+			logger.Warn("更新通知偏好失败", "error", err)
+		}
 	}
 	if req.Status != "" {
 		emp.Status = model.EmployeeStatus(req.Status)
@@ -367,6 +464,38 @@ func (s *EmployeeService) SearchBySkills(ctx context.Context, req *SearchEmploye
 		PageSize:  req.PageSize,
 		TotalPage: totalPage,
 	}, nil
+}
+
+// UpdateNotificationPrefs 更新通知偏好
+func (s *EmployeeService) UpdateNotificationPrefs(ctx context.Context, id string, req UpdateNotificationPrefsRequest) (*EmployeeResponse, error) {
+	// 获取员工
+	emp, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, ErrEmployeeNotFound
+		}
+		logger.Error("获取员工失败", "error", err, "id", id)
+		return nil, fmt.Errorf("获取员工失败: %w", err)
+	}
+
+	// 更新通知偏好
+	prefs := model.NotificationPreferences{
+		Channels: req.Channels,
+		Events:   req.Events,
+	}
+	if err := emp.SetNotificationPrefs(prefs); err != nil {
+		logger.Error("设置通知偏好失败", "error", err, "id", id)
+		return nil, fmt.Errorf("设置通知偏好失败: %w", err)
+	}
+
+	// 保存到数据库
+	if err := s.repo.Update(ctx, emp); err != nil {
+		logger.Error("更新员工失败", "error", err, "id", id)
+		return nil, fmt.Errorf("更新员工失败: %w", err)
+	}
+
+	logger.Info("通知偏好更新成功", "id", id)
+	return toEmployeeResponse(emp), nil
 }
 
 // GenerateAPIKey 生成 API Key
