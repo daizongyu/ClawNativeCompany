@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
-import { employeeApi, Employee, CreateEmployeeRequest, UpdateEmployeeRequest } from '../services/employee';
+import { employeeApi, Employee } from '../services/employee';
 import { PageContainer } from '../components/common';
+import EmployeeForm from '../components/EmployeeForm';
 
 const { Option } = Select;
 
@@ -121,32 +122,7 @@ const Employees: React.FC = () => {
     }
   };
 
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      if (editingEmployee) {
-        const res = await employeeApi.update(editingEmployee.id, values as UpdateEmployeeRequest);
-        if (res.code === 0) {
-          message.success('更新成功');
-          setModalVisible(false);
-          fetchEmployees();
-        } else {
-          message.error(res.message || '更新失败');
-        }
-      } else {
-        const res = await employeeApi.create(values as CreateEmployeeRequest);
-        if (res.code === 0) {
-          message.success('创建成功');
-          setModalVisible(false);
-          fetchEmployees();
-        } else {
-          message.error(res.message || '创建失败');
-        }
-      }
-    } catch (error) {
-      console.error('保存员工失败:', error);
-    }
-  };
+
 
   const columns = [
     {
@@ -315,95 +291,16 @@ const Employees: React.FC = () => {
         />
 
         {/* 编辑/创建模态框 */}
-        <Modal
-          title={editingEmployee ? '编辑员工' : '新建员工'}
-          open={modalVisible}
-          onOk={handleModalOk}
+        <EmployeeForm
+          visible={modalVisible}
           onCancel={() => setModalVisible(false)}
-          destroyOnClose
-          data-testid="employee-modal"
-        >
-          <Form form={form} layout="vertical">
-            <Form.Item
-              label="姓名"
-              name="name"
-              rules={[{ required: true, message: '请输入姓名' }]}
-            >
-              <Input
-                placeholder="请输入姓名"
-                data-testid="input-employee-name"
-                data-input-name="employee-name"
-              />
-            </Form.Item>
-            <Form.Item
-              label="邮箱"
-              name="email"
-              rules={[
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '请输入有效的邮箱地址' },
-              ]}
-            >
-              <Input
-                placeholder="请输入邮箱"
-                data-testid="input-employee-email"
-                data-input-name="employee-email"
-              />
-            </Form.Item>
-            <Form.Item
-              label="类型"
-              name="type"
-              rules={[{ required: true, message: '请选择类型' }]}
-            >
-              <Select
-                placeholder="请选择类型"
-                data-testid="input-employee-type"
-                data-input-name="employee-type"
-              >
-                <Option value="human">人类员工</Option>
-                <Option value="agent">AI Agent</Option>
-              </Select>
-            </Form.Item>
-            <Form.Item
-              label="职能"
-              name="role"
-            >
-              <Input
-                placeholder="请输入职能，如：开发、产品、设计等"
-                data-testid="input-employee-role"
-                data-input-name="employee-role"
-              />
-            </Form.Item>
-            {editingEmployee && (
-              <Form.Item
-                label="状态"
-                name="status"
-                rules={[{ required: true, message: '请选择状态' }]}
-              >
-                <Select
-                  placeholder="请选择状态"
-                  data-testid="input-employee-status"
-                  data-input-name="employee-status"
-                >
-                  <Option value="active">在职</Option>
-                  <Option value="inactive">离职</Option>
-                </Select>
-              </Form.Item>
-            )}
-            {!editingEmployee && (
-              <Form.Item
-                label="密码"
-                name="password"
-                rules={[{ required: true, message: '请输入密码' }]}
-              >
-                <Input.Password
-                  placeholder="请输入密码"
-                  data-testid="input-employee-password"
-                  data-input-name="employee-password"
-                />
-              </Form.Item>
-            )}
-          </Form>
-        </Modal>
+          onSuccess={() => {
+            setModalVisible(false);
+            fetchEmployees();
+          }}
+          initialValues={editingEmployee || undefined}
+          mode={editingEmployee ? 'edit' : 'create'}
+        />
 
         {/* API Key 展示模态框 */}
         <Modal

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Layout, Dropdown, Avatar, Space, Button } from 'antd';
-import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { LogoutOutlined, UserOutlined, SettingOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/auth';
 
@@ -15,7 +15,17 @@ const Header: React.FC = () => {
     navigate('/login');
   };
 
+  const handleProfile = () => {
+    navigate('/profile');
+  };
+
   const items = [
+    {
+      key: 'profile',
+      icon: <SettingOutlined />,
+      label: '个人中心',
+      onClick: handleProfile,
+    },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
@@ -38,8 +48,12 @@ const Header: React.FC = () => {
     >
       <Dropdown menu={{ items }} placement="bottomRight">
         <Space style={{ cursor: 'pointer' }} data-testid="user-menu">
-          <Avatar icon={<UserOutlined />} data-testid="user-avatar" />
-          <span data-testid="user-name">{user?.name || '用户'}</span>
+          <Avatar
+            src={user?.avatar}
+            icon={<UserOutlined />}
+            data-testid="user-avatar"
+          />
+          <span data-testid="user-name">{user?.display_name || user?.name || '用户'}</span>
         </Space>
       </Dropdown>
       <Button

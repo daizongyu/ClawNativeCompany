@@ -13,6 +13,7 @@ import Tasks from './pages/Tasks';
 import Workflows from './pages/Workflows/index';
 import WorkflowEditor from './pages/WorkflowEditor';
 import ExecutionHistory from './pages/ExecutionHistory';
+import Profile from './pages/Profile';
 
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -122,6 +123,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <LayoutRoute element={<ExecutionHistory />} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Profile />} />
                 </ProtectedRoute>
               }
             />
