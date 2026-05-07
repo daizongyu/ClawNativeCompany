@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm } from 'antd';
+import { Table, Button, Tag, Space, Modal, Form, Input, Select, message, Popconfirm, Alert } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, KeyOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import { employeeApi, Employee } from '../services/employee';
 import { PageContainer } from '../components/common';
@@ -21,12 +21,28 @@ const Employees: React.FC = () => {
   const [filterRole, setFilterRole] = useState<string>('');
   const [filterKeyword, setFilterKeyword] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [roleOptions, setRoleOptions] = useState<string[]>([]);
 
   // 设置当前页面
   useEffect(() => {
     if (typeof window !== 'undefined' && window.__CLAW_TEST__) {
       window.__CLAW_TEST__.setCurrentPage('employees');
     }
+  }, []);
+
+  // 加载职能选项
+  useEffect(() => {
+    const loadRoleOptions = async () => {
+      try {
+        const res = await employeeApi.getDistinctRoles();
+        if (res.code === 0) {
+          setRoleOptions(res.data.roles || []);
+        }
+      } catch (error) {
+        console.error('加载职能选项失败:', error);
+      }
+    };
+    loadRoleOptions();
   }, []);
 
   // 暴露测试函数
@@ -238,13 +254,20 @@ const Employees: React.FC = () => {
               <Option value="active">在职</Option>
               <Option value="inactive">离职</Option>
             </Select>
-            <Input
-              placeholder="输入职能"
-              value={filterRole}
-              onChange={(e) => setFilterRole(e.target.value)}
+            <Select
+              placeholder="选择职能"
+              value={filterRole || undefined}
+              onChange={setFilterRole}
+              allowClear
+              showSearch
+              optionFilterProp="children"
               style={{ width: 150 }}
               data-testid="filter-employee-role"
-            />
+            >
+              {roleOptions.map(role => (
+                <Option key={role} value={role}>{role}</Option>
+              ))}
+            </Select>
             <Input
               placeholder="搜索姓名或邮箱"
               value={filterKeyword}
@@ -310,6 +333,13 @@ const Employees: React.FC = () => {
           onCancel={() => setApiKeyModalVisible(false)}
           data-testid="apikey-modal"
         >
+          <Alert
+            message="安全提示"
+            description="API Key 是访问系统的重要凭证，请妥善保管。请勿将 API Key 泄露给他人，避免造成数据安全风险。"
+            type="warning"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
           <p>请复制并保存您的 API Key：</p>
           <Input.TextArea
             value={apiKey}
@@ -317,6 +347,9 @@ const Employees: React.FC = () => {
             rows={3}
             data-testid="apikey-display"
           />
+          <p style={{ marginTop: '16px', color: '#666', fontSize: '12px' }}>
+            提示：此 API Key 仅显示一次，关闭后将无法再次查看。
+          </p>
         </Modal>
       </div>
     </PageContainer>

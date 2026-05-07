@@ -25,8 +25,8 @@ const (
 type Employee struct {
 	Base
 	// 基础信息
-	Username    string         `gorm:"size:50;uniqueIndex;not null" json:"username"` // 用户名，唯一标识
-	DisplayName string         `gorm:"size:100;not null" json:"display_name"`        // 显示名
+	Username    string         `gorm:"size:50;uniqueIndex" json:"username"` // 用户名，唯一标识
+	DisplayName string         `gorm:"size:100" json:"display_name"`        // 显示名
 	Name        string         `gorm:"size:100;not null" json:"name"`                // 保留兼容
 	Type        EmployeeType   `gorm:"size:20;not null" json:"type"`                 // human | agent
 	Email       string         `gorm:"size:255;uniqueIndex;not null" json:"email"`

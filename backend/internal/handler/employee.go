@@ -314,6 +314,20 @@ func (h *EmployeeHandler) UpdateNotificationPrefs(c *gin.Context) {
 	utils.SuccessWithData(c, resp)
 }
 
+// GetDistinctRoles 获取所有已有的职能值
+// GET /api/v1/employees/roles
+func (h *EmployeeHandler) GetDistinctRoles(c *gin.Context) {
+	roles, err := h.employeeService.GetDistinctRoles(c.Request.Context())
+	if err != nil {
+		utils.Error(c, http.StatusInternalServerError, "获取职能列表失败")
+		return
+	}
+
+	utils.SuccessWithData(c, gin.H{
+		"roles": roles,
+	})
+}
+
 // RegisterRoutes 注册路由
 func (h *EmployeeHandler) RegisterRoutes(r *gin.RouterGroup) {
 	employees := r.Group("/employees")
@@ -321,6 +335,7 @@ func (h *EmployeeHandler) RegisterRoutes(r *gin.RouterGroup) {
 		employees.POST("", h.Create)
 		employees.GET("", h.List)
 		employees.GET("/me", h.GetMe)
+		employees.GET("/roles", h.GetDistinctRoles)
 		employees.GET("/search", h.SearchBySkills)
 		employees.GET("/:id", h.Get)
 		employees.PUT("/:id", h.Update)

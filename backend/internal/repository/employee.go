@@ -32,6 +32,7 @@ type EmployeeRepository interface {
 	ListWithFilter(ctx context.Context, filter *EmployeeFilter, page, pageSize int) ([]*model.Employee, int64, error)
 	SearchBySkills(ctx context.Context, skills []string, page, pageSize int) ([]*model.Employee, int64, error)
 	Count(ctx context.Context) (int64, error)
+	GetDistinctRoles(ctx context.Context) ([]string, error)
 }
 
 // employeeRepo 员工 Repository 实现
@@ -182,4 +183,16 @@ func (r *employeeRepo) SearchBySkills(ctx context.Context, skills []string, page
 	}
 
 	return emps, total, nil
+}
+
+// GetDistinctRoles 获取所有已有的职能值
+func (r *employeeRepo) GetDistinctRoles(ctx context.Context) ([]string, error) {
+	var roles []string
+	err := r.db.WithContext(ctx).
+		Model(&model.Employee{}).
+		Where("role != '' AND role IS NOT NULL").
+		Distinct("role").
+		Pluck("role", &roles).
+		Error
+	return roles, err
 }

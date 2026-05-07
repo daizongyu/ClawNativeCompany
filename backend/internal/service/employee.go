@@ -510,10 +510,8 @@ func (s *EmployeeService) GenerateAPIKey(ctx context.Context, id string) (*APIKe
 		return nil, fmt.Errorf("获取员工失败: %w", err)
 	}
 
-	// 只有 Agent 类型可以生成 API Key
-	if emp.Type != model.EmployeeTypeAgent {
-		return nil, errors.New("只有 Agent 类型员工可以生成 API Key")
-	}
+	// 去掉类型限制，允许所有员工生成 API Key
+	// 人类员工也可通过智能体代理使用 API Key
 
 	// 生成新的 API Key
 	apiKey := generateAPIKey()
@@ -535,6 +533,11 @@ func (s *EmployeeService) GenerateAPIKey(ctx context.Context, id string) (*APIKe
 // ResetAPIKey 重置 API Key
 func (s *EmployeeService) ResetAPIKey(ctx context.Context, id string) (*APIKeyResponse, error) {
 	return s.GenerateAPIKey(ctx, id)
+}
+
+// GetDistinctRoles 获取所有已有的职能值
+func (s *EmployeeService) GetDistinctRoles(ctx context.Context) ([]string, error) {
+	return s.repo.GetDistinctRoles(ctx)
 }
 
 // generateAPIKey 生成随机 API Key

@@ -152,4 +152,9 @@ export const employeeApi = {
   resetApiKey: (id: string): Promise<any> => {
     return request.put(`/employees/${id}/apikey`);
   },
+
+  // 获取所有已有的职能值
+  getDistinctRoles: (): Promise<any> => {
+    return request.get('/employees/roles');
+  },
 };

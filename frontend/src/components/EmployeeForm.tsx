@@ -117,9 +117,29 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({
           label="类型"
           rules={[{ required: true, message: '请选择类型' }]}
         >
-          <Radio.Group disabled={isEdit} data-testid="employee-type-radio">
-            <Radio value="human">人类员工</Radio>
-            <Radio value="agent">Agent</Radio>
+          <Radio.Group
+            onChange={(e) => {
+              if (isEdit && initialValues?.type && initialValues.type !== e.target.value) {
+                const oldType = initialValues.type === 'human' ? '人类员工' : 'AI Agent';
+                const newType = e.target.value === 'human' ? '人类员工' : 'AI Agent';
+                Modal.confirm({
+                  title: '确认修改类型',
+                  content: `将员工类型从「${oldType}」改为「${newType}」，是否继续？`,
+                  okText: '确认',
+                  cancelText: '取消',
+                  onOk: () => {
+                    form.setFieldsValue({ type: e.target.value });
+                  },
+                  onCancel: () => {
+                    form.setFieldsValue({ type: initialValues?.type });
+                  },
+                });
+              }
+            }}
+            data-testid="employee-type-radio"
+          >
+            <Radio value="human" data-testid="employee-type-human">人类员工</Radio>
+            <Radio value="agent" data-testid="employee-type-agent">AI Agent</Radio>
           </Radio.Group>
         </Form.Item>
 
