@@ -86,8 +86,8 @@ func APIKeyAuth() gin.HandlerFunc {
 			return
 		}
 
-		// 验证 API Key 格式（base64 编码的 32 字节 = 44 字符）
-		if len(apiKey) != 44 {
+		// 验证 API Key 格式（支持44字符纯base64 或 69字符带claw_前缀）
+		if len(apiKey) != 44 && len(apiKey) != 69 {
 			utils.Error(c, http.StatusUnauthorized, "API Key 格式错误")
 			c.Abort()
 			return
@@ -150,10 +150,12 @@ func DualAuth() gin.HandlerFunc {
 			}
 		}
 
-		// 尝试 API Key 认证
-		if apiKey != "" && len(apiKey) == 44 {
+		// 尝试 API Key 认证（支持44或69字符）
+		if apiKey != "" && (len(apiKey) == 44 || len(apiKey) == 69) {
+			logger.Info("API Key auth attempt", "key_len", len(apiKey), "key_prefix", apiKey[:10])
 			employeeRepo := repository.NewEmployeeRepository()
 			employee, err := employeeRepo.GetByAPIKey(c.Request.Context(), apiKey)
+			logger.Info("API Key result", "employee", employee, "err", err)
 			if err == nil && employee.IsActive() {
 				c.Set(string(ContextKeyEmployeeID), employee.ID)
 				c.Set(string(ContextKeyEmployeeName), employee.Name)

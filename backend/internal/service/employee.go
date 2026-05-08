@@ -40,9 +40,9 @@ func NewEmployeeService() *EmployeeService {
 
 // CreateEmployeeRequest 创建员工请求
 type CreateEmployeeRequest struct {
-	Username    string   `json:"username" validate:"required,min=3,max=50,alphanum"`
+	Username    string   `json:"username" validate:"required,min=3,max=50,username"`
 	DisplayName string   `json:"display_name" validate:"required,min=1,max=100"`
-	Name        string   `json:"name" validate:"required,min=1,max=100"` // 兼容旧字段
+	Name        string   `json:"name"` // 自动从 display_name 复制，无需前端传入
 	Type        string   `json:"type" validate:"required,oneof=human agent"`
 	Email       string   `json:"email" validate:"required,email"`
 	Password    string   `json:"password" validate:"min=6"`
@@ -61,9 +61,9 @@ type CreateEmployeeRequest struct {
 
 // UpdateEmployeeRequest 更新员工请求
 type UpdateEmployeeRequest struct {
-	Username    string   `json:"username,omitempty" validate:"omitempty,min=3,max=50,alphanum"`
+	Username    string   `json:"username,omitempty" validate:"omitempty,min=3,max=50,username"`
 	DisplayName string   `json:"display_name,omitempty" validate:"omitempty,min=1,max=100"`
-	Name        string   `json:"name,omitempty" validate:"omitempty,min=2,max=100"`
+	Name        string   `json:"name,omitempty"` // 自动从 display_name 复制
 	Type        string   `json:"type,omitempty" validate:"omitempty,oneof=human agent"`
 	Email       string   `json:"email,omitempty" validate:"omitempty,email"`
 	Role        string   `json:"role,omitempty"`
@@ -197,11 +197,17 @@ func (s *EmployeeService) Create(ctx context.Context, req *CreateEmployeeRequest
 	// 构建技能 JSON
 	skillsJSON, _ := json.Marshal(req.Skills)
 
+	// 如果 name 为空，则使用 display_name
+	name := req.Name
+	if name == "" {
+		name = req.DisplayName
+	}
+
 	// 创建员工模型
 	emp := &model.Employee{
 		Username:    req.Username,
 		DisplayName: req.DisplayName,
-		Name:        req.Name,
+		Name:        name,
 		Type:        empType,
 		Email:       req.Email,
 		Role:        req.Role,

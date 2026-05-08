@@ -38,6 +38,7 @@ func registerCustomValidators() {
 	// 注册自定义校验标签
 	validate.RegisterValidation("phone", validatePhone)
 	validate.RegisterValidation("password", validatePassword)
+	validate.RegisterValidation("username", validateUsername)
 }
 
 // ValidateStruct 校验结构体
@@ -103,6 +104,8 @@ func getErrorMessage(e validator.FieldError) string {
 		return "手机号格式不正确"
 	case "password":
 		return "密码必须包含字母和数字，长度8-32位"
+	case "username":
+		return "用户名只能包含字母、数字和下划线"
 	case "uuid":
 		return "UUID 格式不正确"
 	case "oneof":
@@ -141,6 +144,15 @@ func validatePassword(fl validator.FieldLevel) bool {
 	hasLetter := regexp.MustCompile(`[a-zA-Z]`).MatchString(password)
 	hasNumber := regexp.MustCompile(`[0-9]`).MatchString(password)
 	return hasLetter && hasNumber
+}
+
+// validateUsername 校验用户名（支持字母、数字、下划线）
+func validateUsername(fl validator.FieldLevel) bool {
+	username := fl.Field().String()
+	// 只允许字母、数字和下划线
+	pattern := `^[a-zA-Z0-9_]+$`
+	matched, _ := regexp.MatchString(pattern, username)
+	return matched
 }
 
 // 便捷校验函数
