@@ -33,6 +33,7 @@ type EmployeeRepository interface {
 	SearchBySkills(ctx context.Context, skills []string, page, pageSize int) ([]*model.Employee, int64, error)
 	Count(ctx context.Context) (int64, error)
 	GetDistinctRoles(ctx context.Context) ([]string, error)
+	Delete(ctx context.Context, id string) error
 }
 
 // employeeRepo 员工 Repository 实现
@@ -195,4 +196,9 @@ func (r *employeeRepo) GetDistinctRoles(ctx context.Context) ([]string, error) {
 		Pluck("role", &roles).
 		Error
 	return roles, err
+}
+
+// Delete 删除员工（硬删除）
+func (r *employeeRepo) Delete(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Delete(&model.Employee{}, "id = ?", id).Error
 }

@@ -411,14 +411,12 @@ func (s *EmployeeService) Delete(ctx context.Context, id string, currentUserID s
 		return fmt.Errorf("获取员工失败: %w", err)
 	}
 
-	// TODO: 软删除实现，需要在 repository 中添加 Delete 方法
-	// 目前使用更新状态为 inactive 作为替代
-	emp := &model.Employee{}
-	emp.ID = id
-	emp.Status = model.EmployeeStatusInactive
-	
-	// 这里我们需要一个软删除方法，暂时使用硬删除
-	// 实际项目中应该使用软删除
+	// 执行硬删除
+	if err := s.repo.Delete(ctx, id); err != nil {
+		logger.Error("删除员工失败", "error", err, "id", id)
+		return fmt.Errorf("删除员工失败: %w", err)
+	}
+
 	logger.Info("员工删除成功", "id", id)
 	return nil
 }
