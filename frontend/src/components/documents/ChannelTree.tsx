@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Tree, Input, Button, Empty, Spin } from 'antd';
-import { FolderOutlined, FolderAddOutlined } from '@ant-design/icons';
+import { FolderAddOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import { ChannelNode } from '../../services/channel';
 import { ChannelTreeNodeTitle } from './ChannelTreeNodeTitle';
@@ -22,7 +22,7 @@ function renderTreeData(channels: ChannelNode[]): DataNode[] {
   return channels.map((ch) => ({
     key: ch.id,
     title: ch.name,
-    icon: <FolderOutlined />,
+    // 不设置 icon，由 titleRender 渲染
     children: ch.children?.length > 0
       ? renderTreeData(ch.children)
       : undefined,

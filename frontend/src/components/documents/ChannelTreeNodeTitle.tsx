@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dropdown, Tag } from 'antd';
+import { Dropdown } from 'antd';
 import { FolderOutlined, FolderAddOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 
@@ -66,22 +66,16 @@ export const ChannelTreeNodeTitle: React.FC<ChannelTreeNodeTitleProps> = ({
     >
       <span
         className="channel-node-title"
+        style={{ display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}
         data-testid={`channel-node-${node.key}`}
         data-channel-id={node.key}
         data-channel-name={typeof node.title === 'string' ? node.title : ''}
       >
-        <FolderOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-        <span className="channel-name">{node.title}</span>
-        <span
-          className="channel-node-count"
-          style={{ marginLeft: 8, fontSize: 12, color: '#999' }}
-        >
+        <FolderOutlined style={{ marginRight: 6, color: '#1890ff' }} />
+        <span className="channel-name" style={{ marginRight: 8 }}>{node.title}</span>
+        <span style={{ fontSize: 12, color: '#999' }}>
           {node.doc_count ?? 0} 文档
-          {(node.child_count ?? 0) > 0 && (
-            <Tag style={{ marginLeft: 4 }} color="blue">
-              {node.child_count} 子频道
-            </Tag>
-          )}
+          {(node.child_count ?? 0) > 0 && ` | ${node.child_count} 子频道`}
         </span>
       </span>
     </Dropdown>
