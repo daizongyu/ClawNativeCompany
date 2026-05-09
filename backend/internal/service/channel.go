@@ -71,6 +71,7 @@ type ChannelResponse struct {
 	Name        string           `json:"name"`
 	Type        string           `json:"type"`
 	Description string           `json:"description"`
+	ParentID    *string          `json:"parent_id"`    // 父频道ID
 	Path        string           `json:"path"`         // 树形路径
 	Depth       int              `json:"depth"`        // 层级深度
 	CreatedBy   string           `json:"created_by"`
@@ -161,6 +162,7 @@ func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channe
 		Name:        ch.Name,
 		Type:        string(ch.Type),
 		Description: ch.Description,
+		ParentID:    ch.ParentID,
 		Path:        ch.Path,
 		Depth:       ch.Depth,
 		CreatedBy:   ch.CreatedBy,
