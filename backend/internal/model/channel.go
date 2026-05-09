@@ -54,32 +54,32 @@ func (c *Channel) BeforeCreate(tx *gorm.DB) error {
 		c.ID = GenerateID("ch")
 	}
 
-	// 自动计算 Path 和 Depth
-	if c.ParentID != nil {
+	// 自动计算 Path 和 Depth（使用 ID 而非 Name）
+	if c.ParentID != nil && *c.ParentID != "" {
 		var parent Channel
 		if err := tx.First(&parent, "id = ?", *c.ParentID).Error; err == nil {
-			c.Path = parent.Path + "/" + c.Name
+			c.Path = parent.Path + "/" + c.ID
 			c.Depth = parent.Depth + 1
 		}
 	} else {
-		c.Path = "/" + c.Name
+		c.Path = "/" + c.ID
 		c.Depth = 0
 	}
 
 	return nil
 }
 
-// BeforeUpdate 更新前处理 - 如果名称变更，需要更新 Path
+// BeforeUpdate 更新前处理 - 如果 ParentID 变更，需要更新 Path
 func (c *Channel) BeforeUpdate(tx *gorm.DB) error {
-	// 如果 ParentID 发生变化，重新计算 Path 和 Depth
-	if c.ParentID != nil {
+	// 如果 ParentID 发生变化，重新计算 Path 和 Depth（使用 ID 而非 Name）
+	if c.ParentID != nil && *c.ParentID != "" {
 		var parent Channel
 		if err := tx.First(&parent, "id = ?", *c.ParentID).Error; err == nil {
-			c.Path = parent.Path + "/" + c.Name
+			c.Path = parent.Path + "/" + c.ID
 			c.Depth = parent.Depth + 1
 		}
 	} else {
-		c.Path = "/" + c.Name
+		c.Path = "/" + c.ID
 		c.Depth = 0
 	}
 	return nil

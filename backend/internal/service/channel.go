@@ -71,6 +71,8 @@ type ChannelResponse struct {
 	Name        string           `json:"name"`
 	Type        string           `json:"type"`
 	Description string           `json:"description"`
+	Path        string           `json:"path"`         // 树形路径
+	Depth       int              `json:"depth"`        // 层级深度
 	CreatedBy   string           `json:"created_by"`
 	CreatorName string           `json:"creator_name"` // 创建者名称
 	MemberCount int              `json:"member_count"` // 成员数量
@@ -159,6 +161,8 @@ func (s *ChannelService) toChannelResponse(ctx context.Context, ch *model.Channe
 		Name:        ch.Name,
 		Type:        string(ch.Type),
 		Description: ch.Description,
+		Path:        ch.Path,
+		Depth:       ch.Depth,
 		CreatedBy:   ch.CreatedBy,
 		CreatedAt:   ch.CreatedAt.Format("2006-01-02T15:04:05"),
 		UpdatedAt:   ch.UpdatedAt.Format("2006-01-02T15:04:05"),
