@@ -50,6 +50,15 @@ type ChannelRepository interface {
 
 	// 权限检查
 	CheckPermission(ctx context.Context, channelID, employeeID string, minRole model.ChannelRole) (bool, error)
+
+	// 树形结构相关（新增）
+	ListAll(ctx context.Context) ([]*model.Channel, error)
+	ListByParent(ctx context.Context, parentID string) ([]*model.Channel, error)
+	GetChildren(ctx context.Context, parentID string) ([]*model.Channel, error)
+	GetByPath(ctx context.Context, path string) (*model.Channel, error)
+	ListRoots(ctx context.Context) ([]*model.Channel, error)
+	UpdateDocCount(ctx context.Context, channelID string, delta int) error
+	UpdateChildCount(ctx context.Context, channelID string, delta int) error
 }
 
 // channelRepo 频道 Repository 实现
@@ -290,4 +299,71 @@ func (r *channelRepo) Count(ctx context.Context) (int64, error) {
 		return 0, err
 	}
 	return count, nil
+}
+
+// ListAll 获取所有频道（用于构建树）
+func (r *channelRepo) ListAll(ctx context.Context) ([]*model.Channel, error) {
+	var channels []*model.Channel
+	if err := r.db.WithContext(ctx).Find(&channels).Error; err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+// ListByParent 获取子频道列表
+func (r *channelRepo) ListByParent(ctx context.Context, parentID string) ([]*model.Channel, error) {
+	var channels []*model.Channel
+	if err := r.db.WithContext(ctx).Where("parent_id = ?", parentID).Find(&channels).Error; err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+// GetChildren 获取子频道（包含成员信息）
+func (r *channelRepo) GetChildren(ctx context.Context, parentID string) ([]*model.Channel, error) {
+	var channels []*model.Channel
+	if err := r.db.WithContext(ctx).
+		Preload("Members").
+		Where("parent_id = ?", parentID).
+		Order("created_at ASC").
+		Find(&channels).Error; err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+// GetByPath 根据路径获取频道
+func (r *channelRepo) GetByPath(ctx context.Context, path string) (*model.Channel, error) {
+	var ch model.Channel
+	err := r.db.WithContext(ctx).Where("path = ?", path).First(&ch).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrChannelNotFound
+		}
+		return nil, err
+	}
+	return &ch, nil
+}
+
+// ListRoots 获取所有根频道
+func (r *channelRepo) ListRoots(ctx context.Context) ([]*model.Channel, error) {
+	var channels []*model.Channel
+	if err := r.db.WithContext(ctx).Where("parent_id IS NULL").Find(&channels).Error; err != nil {
+		return nil, err
+	}
+	return channels, nil
+}
+
+// UpdateDocCount 更新频道文档数量（delta 为变化量，+1 或 -1）
+func (r *channelRepo) UpdateDocCount(ctx context.Context, channelID string, delta int) error {
+	return r.db.WithContext(ctx).Model(&model.Channel{}).
+		Where("id = ?", channelID).
+		UpdateColumn("doc_count", gorm.Expr("doc_count + ?", delta)).Error
+}
+
+// UpdateChildCount 更新频道子频道数量（delta 为变化量，+1 或 -1）
+func (r *channelRepo) UpdateChildCount(ctx context.Context, channelID string, delta int) error {
+	return r.db.WithContext(ctx).Model(&model.Channel{}).
+		Where("id = ?", channelID).
+		UpdateColumn("child_count", gorm.Expr("child_count + ?", delta)).Error
 }

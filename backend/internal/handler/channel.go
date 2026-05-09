@@ -404,16 +404,104 @@ func (h *ChannelHandler) GetMyRole(c *gin.Context) {
 	utils.SuccessWithData(c, gin.H{"role": role})
 }
 
+// GetTree 获取频道树
+// GET /api/v1/channels/tree
+func (h *ChannelHandler) GetTree(c *gin.Context) {
+	rootID := c.Query("root_id")
+
+	tree, err := h.channelService.GetChannelTree(c.Request.Context(), rootID)
+	if err != nil {
+		utils.Error(c, http.StatusInternalServerError, "获取频道树失败")
+		return
+	}
+
+	utils.SuccessWithData(c, gin.H{"channels": tree})
+}
+
+// CreateChild 创建子频道
+// POST /api/v1/channels/:id/children
+func (h *ChannelHandler) CreateChild(c *gin.Context) {
+	parentID := c.Param("id")
+	if parentID == "" {
+		utils.ValidationError(c, "父频道ID不能为空")
+		return
+	}
+
+	var req service.CreateChildChannelRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationError(c, "请求参数错误: "+err.Error())
+		return
+	}
+
+	// 参数校验
+	if err := validator.ValidateStruct(req); err != nil {
+		errors := validator.FormatValidationError(err)
+		if len(errors) > 0 {
+			utils.ValidationError(c, errors[0].Message)
+			return
+		}
+	}
+
+	// 获取当前用户ID
+	createdBy := utils.GetEmployeeID(c)
+	if createdBy == "" {
+		utils.Error(c, http.StatusUnauthorized, "未登录")
+		return
+	}
+	req.CreatedBy = createdBy
+
+	channel, err := h.channelService.CreateChildChannel(c.Request.Context(), parentID, &req)
+	if err != nil {
+		switch err {
+		case service.ErrChannelNotFound:
+			utils.Error(c, http.StatusNotFound, "父频道不存在")
+		case service.ErrPermissionDenied:
+			utils.Error(c, http.StatusForbidden, "权限不足")
+		default:
+			utils.Error(c, http.StatusInternalServerError, "创建子频道失败")
+		}
+		return
+	}
+
+	utils.SuccessWithData(c, channel)
+}
+
+// GetDetail 获取频道详情（含子频道和文档）
+// GET /api/v1/channels/:id/detail
+func (h *ChannelHandler) GetDetail(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		utils.ValidationError(c, "频道 ID 不能为空")
+		return
+	}
+
+	detail, err := h.channelService.GetChannelDetail(c.Request.Context(), id)
+	if err != nil {
+		switch err {
+		case service.ErrChannelNotFound:
+			utils.Error(c, http.StatusNotFound, "频道不存在")
+		default:
+			utils.Error(c, http.StatusInternalServerError, "获取频道详情失败")
+		}
+		return
+	}
+
+	utils.SuccessWithData(c, detail)
+}
+
 // RegisterRoutes 注册路由
 func (h *ChannelHandler) RegisterRoutes(r *gin.RouterGroup) {
 	channels := r.Group("/channels")
 	{
 		channels.POST("", h.Create)
 		channels.GET("", h.List)
+		channels.GET("/tree", h.GetTree)
 		channels.GET("/my", h.ListMyChannels)
 		channels.GET("/:id", h.Get)
+		channels.GET("/:id/detail", h.GetDetail)
 		channels.PUT("/:id", h.Update)
 		channels.DELETE("/:id", h.Delete)
+		channels.POST("/:id/children", h.CreateChild)
 		channels.GET("/:id/members", h.ListMembers)
 		channels.POST("/:id/members", h.AddMember)
 		channels.DELETE("/:id/members/:employee_id", h.RemoveMember)

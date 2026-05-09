@@ -25,6 +25,11 @@ func (b *Base) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// GenerateID 生成带前缀的ID
+func GenerateID(prefix string) string {
+	return prefix + "_" + uuid.New().String()
+}
+
 // IsDeleted 检查记录是否已软删除
 func (b *Base) IsDeleted() bool {
 	return b.DeletedAt.Valid

@@ -27,7 +27,9 @@ func Migrate(db *gorm.DB) error {
 		&model.Workflow{},
 		&model.WorkflowExecution{},
 		&model.Task{},
-		&model.GatewayConfig{}, // 新增 GatewayConfig 表
+		&model.GatewayConfig{},    // GatewayConfig 表
+		&model.Document{},         // 新增 Document 表
+		&model.DocumentVersion{},  // 新增 DocumentVersion 表
 	}
 
 	for _, mdl := range models {

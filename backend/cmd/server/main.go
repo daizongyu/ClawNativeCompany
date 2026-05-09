@@ -103,6 +103,7 @@ func main() {
 	webhookHandler := handler.NewWebhookHandler()
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 	gatewayConfigHandler := handler.NewGatewayConfigHandler(gatewayConfigService)
+	documentHandler := handler.NewDocumentHandler() // 新增文档Handler
 	wsManager := websocket.GetManager()
 
 	// 创建 Gin 引擎
@@ -143,6 +144,9 @@ func main() {
 
 			// Gateway 配置路由
 			gatewayConfigHandler.RegisterRoutes(protected)
+
+			// 文档管理路由
+			documentHandler.RegisterRoutes(protected)
 
 			// Dashboard 路由
 			protected.GET("/dashboard/stats", dashboardHandler.GetStats)

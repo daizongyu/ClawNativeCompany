@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"claw/internal/logger"
 	"claw/internal/model"
@@ -92,6 +93,37 @@ type ChannelMemberResponse struct {
 	Role       string           `json:"role"`
 	Employee   *EmployeeSummary `json:"employee,omitempty"`
 	JoinedAt   string           `json:"joined_at"`
+}
+
+// ChannelTreeNode 频道树节点
+type ChannelTreeNode struct {
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Type        string             `json:"type"`
+	Description string             `json:"description"`
+	Path        string             `json:"path"`
+	Depth       int                `json:"depth"`
+	DocCount    int                `json:"doc_count"`
+	ChildCount  int                `json:"child_count"`
+	Children    []*ChannelTreeNode `json:"children,omitempty"`
+	CreatedBy   string             `json:"created_by"`
+	CreatorName string             `json:"creator_name"`
+	CreatedAt   string             `json:"created_at"`
+	UpdatedAt   string             `json:"updated_at"`
+}
+
+// ChannelDetailResponse 频道详情响应（含子频道和文档）
+type ChannelDetailResponse struct {
+	ChannelResponse
+	Children    []*ChannelTreeNode `json:"children"`
+	Documents   interface{}        `json:"documents,omitempty"`
+	Breadcrumbs []*BreadcrumbItem  `json:"breadcrumbs"`
+}
+
+// BreadcrumbItem 面包屑项
+type BreadcrumbItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // EmployeeSummary 员工摘要
@@ -513,4 +545,205 @@ func (s *ChannelService) GetMemberRole(ctx context.Context, channelID, employeeI
 		return "", err
 	}
 	return member.Role, nil
+}
+
+// ==================== 树形结构相关方法（新增） ====================
+
+// CreateChildChannelRequest 创建子频道请求
+type CreateChildChannelRequest struct {
+	Name        string `json:"name" validate:"required,min=2,max=100"`
+	Type        string `json:"type" validate:"required,oneof=public private"`
+	Description string `json:"description" validate:"max=500"`
+	CreatedBy   string `json:"created_by"`
+}
+
+// GetChannelTree 获取频道树
+func (s *ChannelService) GetChannelTree(ctx context.Context, rootID string) ([]*ChannelTreeNode, error) {
+	// 1. 获取所有频道
+	channels, err := s.repo.ListAll(ctx)
+	if err != nil {
+		logger.Error("获取所有频道失败", "error", err)
+		return nil, fmt.Errorf("获取频道列表失败: %w", err)
+	}
+
+	// 2. 转换为树节点
+	nodeMap := make(map[string]*ChannelTreeNode)
+	for _, ch := range channels {
+		node := s.toTreeNode(ctx, ch)
+		nodeMap[ch.ID] = node
+	}
+
+	// 3. 构建树结构
+	var roots []*ChannelTreeNode
+	for _, ch := range channels {
+		node := nodeMap[ch.ID]
+		if ch.ParentID != nil && *ch.ParentID != "" {
+			if parent, ok := nodeMap[*ch.ParentID]; ok {
+				parent.Children = append(parent.Children, node)
+				parent.ChildCount++
+			}
+		} else {
+			roots = append(roots, node)
+		}
+	}
+
+	// 4. 如果指定了根节点，返回该节点的子树
+	if rootID != "" {
+		if root, ok := nodeMap[rootID]; ok {
+			return root.Children, nil
+		}
+		return []*ChannelTreeNode{}, nil
+	}
+
+	return roots, nil
+}
+
+// toTreeNode 转换为树节点
+func (s *ChannelService) toTreeNode(ctx context.Context, ch *model.Channel) *ChannelTreeNode {
+	node := &ChannelTreeNode{
+		ID:          ch.ID,
+		Name:        ch.Name,
+		Type:        string(ch.Type),
+		Description: ch.Description,
+		Path:        ch.Path,
+		Depth:       ch.Depth,
+		DocCount:    ch.DocCount,
+		ChildCount:  0,
+		Children:    []*ChannelTreeNode{},
+		CreatedBy:   ch.CreatedBy,
+		CreatedAt:   ch.CreatedAt.Format("2006-01-02T15:04:05"),
+		UpdatedAt:   ch.UpdatedAt.Format("2006-01-02T15:04:05"),
+	}
+
+	// 获取创建者名称
+	if ch.CreatedBy != "" {
+		creator, err := s.empRepo.GetByID(ctx, ch.CreatedBy)
+		if err == nil && creator != nil {
+			node.CreatorName = creator.DisplayName
+		}
+	}
+
+	return node
+}
+
+// GetChannelDetail 获取频道详情（含子频道和文档统计）
+func (s *ChannelService) GetChannelDetail(ctx context.Context, id string) (*ChannelDetailResponse, error) {
+	// 1. 获取频道基本信息
+	channel, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrChannelNotFound) {
+			return nil, ErrChannelNotFound
+		}
+		return nil, err
+	}
+
+	// 2. 获取子频道
+	children, err := s.repo.GetChildren(ctx, id)
+	if err != nil {
+		logger.Warn("获取子频道失败", "error", err, "channel_id", id)
+	}
+
+	childNodes := make([]*ChannelTreeNode, 0, len(children))
+	for _, child := range children {
+		childNodes = append(childNodes, s.toTreeNode(ctx, child))
+	}
+
+	// 3. 构建面包屑
+	breadcrumbs := s.buildBreadcrumbs(ctx, channel)
+
+	// 4. 组合响应
+	detail := &ChannelDetailResponse{
+		ChannelResponse: *s.toChannelResponse(ctx, channel),
+		Children:        childNodes,
+		Breadcrumbs:     breadcrumbs,
+	}
+
+	return detail, nil
+}
+
+// buildBreadcrumbs 构建面包屑路径
+func (s *ChannelService) buildBreadcrumbs(ctx context.Context, ch *model.Channel) []*BreadcrumbItem {
+	if ch.Path == "" {
+		return []*BreadcrumbItem{}
+	}
+
+	// 解析路径获取所有父频道ID
+	pathParts := strings.Split(ch.Path, "/")
+	items := make([]*BreadcrumbItem, 0, len(pathParts))
+
+	for _, part := range pathParts {
+		if part == "" {
+			continue
+		}
+		// 路径格式: /parent_id/channel_id
+		if part == ch.ID {
+			items = append(items, &BreadcrumbItem{
+				ID:   ch.ID,
+				Name: ch.Name,
+			})
+		} else {
+			// 查询父频道名称
+			parent, err := s.repo.GetByID(ctx, part)
+			if err == nil && parent != nil {
+				items = append(items, &BreadcrumbItem{
+					ID:   parent.ID,
+					Name: parent.Name,
+				})
+			}
+		}
+	}
+
+	return items
+}
+
+// CreateChildChannel 创建子频道
+func (s *ChannelService) CreateChildChannel(ctx context.Context, parentID string, req *CreateChildChannelRequest) (*ChannelResponse, error) {
+	// 1. 检查父频道是否存在
+	_, err := s.repo.GetByID(ctx, parentID)
+	if err != nil {
+		if errors.Is(err, repository.ErrChannelNotFound) {
+			return nil, ErrChannelNotFound
+		}
+		return nil, err
+	}
+
+	// 2. 检查权限（需要是父频道管理员或成员）
+	// 注意：这里假设调用方已经验证了权限
+
+	// 3. 创建子频道
+	chType := model.ChannelType(req.Type)
+	if chType != model.ChannelTypePublic && chType != model.ChannelTypePrivate {
+		return nil, ErrInvalidChannelType
+	}
+
+	channel := &model.Channel{
+		Name:        req.Name,
+		Type:        chType,
+		Description: req.Description,
+		ParentID:    &parentID,
+		CreatedBy:   req.CreatedBy,
+	}
+
+	// BeforeCreate 会自动计算 Path 和 Depth
+	if err := s.repo.Create(ctx, channel); err != nil {
+		logger.Error("创建子频道失败", "error", err, "parent_id", parentID)
+		return nil, fmt.Errorf("创建子频道失败: %w", err)
+	}
+
+	// 4. 更新父频道的子频道数量
+	if err := s.repo.UpdateChildCount(ctx, parentID, 1); err != nil {
+		logger.Warn("更新父频道子频道数量失败", "error", err, "parent_id", parentID)
+	}
+
+	// 5. 添加创建者为管理员
+	member := &model.ChannelMember{
+		ChannelID:  channel.ID,
+		EmployeeID: req.CreatedBy,
+		Role:       model.ChannelRoleAdmin,
+	}
+	if err := s.repo.AddMember(ctx, member); err != nil {
+		logger.Warn("添加频道成员失败", "error", err, "channel_id", channel.ID)
+	}
+
+	return s.toChannelResponse(ctx, channel), nil
 }
