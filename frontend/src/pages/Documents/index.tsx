@@ -9,6 +9,7 @@ import { CreateChannelModal } from '../../components/documents/CreateChannelModa
 import { DocumentList } from '../../components/documents/DocumentList';
 import { CreateDocumentModal } from '../../components/documents/CreateDocumentModal';
 import { DocumentEditorPanel } from '../../components/documents/DocumentEditorPanel';
+import { DocumentHistoryModal } from '../../components/documents/DocumentHistoryModal';
 import '../../components/documents/ChannelTree.css';
 import '../../components/documents/DocumentEditorPanel.css';
 
@@ -65,12 +66,12 @@ const DocumentsPage: React.FC = () => {
     openCreateDocumentModal,
     closeCreateDocumentModal,
     
-    // 历史弹窗（Phase 4 实现）
-    // historyModalVisible,
-    // historyDocumentId,
-    // historyDocumentTitle,
+    // 历史弹窗
+    historyModalVisible,
+    historyDocumentId,
+    historyDocumentTitle,
     openHistoryModal,
-    // closeHistoryModal,
+    closeHistoryModal,
   } = useDocumentStore();
 
   // 加载频道树
@@ -361,6 +362,28 @@ const DocumentsPage: React.FC = () => {
         onClose={closeEditor}
         onSaveSuccess={handleSaveSuccess}
         onOpenHistory={() => handleViewHistory(editingDocumentId!, editingDocumentTitle)}
+      />
+
+      {/* 版本历史弹窗 */}
+      <DocumentHistoryModal
+        visible={historyModalVisible}
+        documentId={historyDocumentId || ''}
+        documentTitle={historyDocumentTitle}
+        onCancel={closeHistoryModal}
+        onRestore={(_newVersion) => {
+          // 恢复版本后刷新文档列表
+          if (selectedChannelId) {
+            loadDocuments(selectedChannelId, searchKeyword);
+          }
+          // 如果编辑器打开，刷新编辑器内容
+          if (editorVisible && editingDocumentId === historyDocumentId) {
+            // 触发编辑器重新加载
+            closeEditor();
+            setTimeout(() => {
+              openEditor(historyDocumentId!, historyDocumentTitle);
+            }, 100);
+          }
+        }}
       />
     </Layout>
   );
