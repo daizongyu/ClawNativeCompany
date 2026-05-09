@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
 import Channels from './pages/Channels';
 import ChannelChat from './pages/ChannelChat';
+import Documents from './pages/Documents';
 import Tasks from './pages/Tasks';
 import Workflows from './pages/Workflows/index';
 import WorkflowEditor from './pages/WorkflowEditor';
@@ -91,6 +92,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <ChannelChat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <LayoutRoute element={<Documents />} />
                 </ProtectedRoute>
               }
             />

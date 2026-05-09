@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import { Tree, Input, Button, Empty, Spin } from 'antd';
+import { FolderOutlined, FolderAddOutlined } from '@ant-design/icons';
+import type { DataNode } from 'antd/es/tree';
+import { ChannelNode } from '../../services/channel';
+import { ChannelTreeNodeTitle } from './ChannelTreeNodeTitle';
+import './ChannelTree.css';
+
+interface ChannelTreeProps {
+  channels: ChannelNode[];
+  selectedId: string | null;
+  onSelect: (channelId: string) => void;
+  onCreateChannel: () => void;
+  onEditChannel: (channelId: string) => void;
+  onDeleteChannel: (channelId: string) => void;
+  onCreateChild: (parentId: string, parentName: string) => void;
+  loading?: boolean;
+}
+
+// 将后端返回的频道树数据转换为 Ant Design Tree 格式
+function renderTreeData(
+  channels: ChannelNode[],
+  onEdit: (id: string) => void,
+  onDelete: (id: string) => void,
+  onCreateChild: (parentId: string, parentName: string) => void
+): DataNode[] {
+  return channels.map((ch) => ({
+    key: ch.id,
+    title: ch.name,
+    icon: <FolderOutlined />,
+    children: ch.children?.length > 0
+      ? renderTreeData(ch.children, onEdit, onDelete, onCreateChild)
+      : undefined,
+    // 扩展字段用于 titleRender
+    doc_count: ch.doc_count,
+    child_count: ch.child_count,
+  } as DataNode & { doc_count: number; child_count: number }));
+}
+
+// 搜索过滤（递归）
+function filterChannels(channels: ChannelNode[], keyword: string): ChannelNode[] {
+  if (!keyword) return channels;
+
+  return channels.filter((ch) => {
+    // 名称匹配
+    if (ch.name.toLowerCase().includes(keyword.toLowerCase())) {
+      return true;
+    }
+    // 子频道匹配
+    if (ch.children?.length > 0) {
+      const filteredChildren = filterChannels(ch.children, keyword);
+      if (filteredChildren.length > 0) {
+        ch.children = filteredChildren;
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+export const ChannelTree: React.FC<ChannelTreeProps> = ({
+  channels,
+  selectedId,
+  onSelect,
+  onCreateChannel,
+  onEditChannel,
+  onDeleteChannel,
+  onCreateChild,
+  loading,
+}) => {
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // 搜索过滤后的频道
+  const filteredChannels = filterChannels([...channels], searchKeyword);
+
+  // 自动展开所有匹配的节点
+  const autoExpandKeys = React.useMemo(() => {
+    if (!searchKeyword) return expandedKeys;
+    const keys: string[] = [];
+    const collectKeys = (nodes: ChannelNode[]) => {
+      nodes.forEach((node) => {
+        if (node.children?.length > 0) {
+          keys.push(node.id);
+          collectKeys(node.children);
+        }
+      });
+    };
+    collectKeys(filteredChannels);
+    return keys;
+  }, [searchKeyword, filteredChannels]);
+
+  // 处理展开事件
+  const handleExpand = (keys: React.Key[]) => {
+    setExpandedKeys(keys as string[]);
+  };
+
+  // 转换为 Tree 数据格式
+  const treeData = renderTreeData(
+    filteredChannels,
+    onEditChannel,
+    onDeleteChannel,
+    onCreateChild
+  );
+
+  if (loading) {
+    return (
+      <div className="channel-tree-container" data-testid="channel-tree">
+        <Spin tip="加载频道..." />
+      </div>
+    );
+  }
+
+  if (channels.length === 0) {
+    return (
+      <div className="channel-tree-container" data-testid="channel-tree">
+        <Empty
+          description="暂无频道"
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+        >
+          <Button
+            type="primary"
+            icon={<FolderAddOutlined />}
+            onClick={onCreateChannel}
+            data-testid="create-first-channel-btn"
+          >
+            创建第一个频道
+          </Button>
+        </Empty>
+      </div>
+    );
+  }
+
+  return (
+    <div className="channel-tree-container" data-testid="channel-tree">
+      {/* 搜索框 */}
+      <Input.Search
+        placeholder="搜索频道"
+        value={searchKeyword}
+        onChange={(e) => setSearchKeyword(e.target.value)}
+        style={{ marginBottom: 12 }}
+        allowClear
+        data-testid="channel-tree-search"
+      />
+
+      {/* 树形组件 */}
+      <Tree
+        showLine
+        showIcon
+        expandedKeys={searchKeyword ? autoExpandKeys : expandedKeys}
+        onExpand={handleExpand}
+        selectedKeys={selectedId ? [selectedId] : []}
+        onSelect={(keys) => {
+          if (keys.length > 0) {
+            onSelect(keys[0] as string);
+          }
+        }}
+        treeData={treeData}
+        titleRender={(node: any) => (
+          <ChannelTreeNodeTitle
+            node={node}
+            onEdit={() => onEditChannel(node.key as string)}
+            onDelete={() => onDeleteChannel(node.key as string)}
+            onCreateChild={() => onCreateChild(node.key as string, node.title as string)}
+          />
+        )}
+        data-testid="channel-tree-list"
+      />
+
+      {/* 创建按钮 */}
+      <Button
+        type="dashed"
+        block
+        icon={<FolderAddOutlined />}
+        onClick={onCreateChannel}
+        style={{ marginTop: 12 }}
+        data-testid="create-channel-btn"
+        data-action="create-channel"
+      >
+        新建频道
+      </Button>
+    </div>
+  );
+};

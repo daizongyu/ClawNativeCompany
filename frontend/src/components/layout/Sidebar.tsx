@@ -4,6 +4,7 @@ import {
   DashboardOutlined,
   TeamOutlined,
   MessageOutlined,
+  FileTextOutlined,
   CheckSquareOutlined,
   NodeIndexOutlined,
 } from '@ant-design/icons';
@@ -33,6 +34,12 @@ const Sidebar: React.FC = () => {
       icon: <MessageOutlined />,
       label: '频道',
       'data-testid': 'nav-channels',
+    },
+    {
+      key: '/documents',
+      icon: <FileTextOutlined />,
+      label: '文档',
+      'data-testid': 'nav-documents',
     },
     {
       key: '/tasks',

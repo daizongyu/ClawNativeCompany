@@ -1,0 +1,69 @@
+/* ChannelTree.css - 频道树样式 */
+
+.channel-tree-container {
+  height: 100%;
+  padding: 16px;
+  background: #fafafa;
+  overflow-y: auto;
+}
+
+.channel-tree-container .ant-tree {
+  background: transparent;
+}
+
+.channel-node-title {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.channel-node-title:hover {
+  background: #e6f7ff;
+  border-radius: 4px;
+}
+
+.channel-node-title .channel-name {
+  flex: 1;
+}
+
+.channel-node-count {
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+/* Documents 主页面样式 */
+
+.documents-page .channel-sider {
+  overflow: hidden;
+}
+
+.documents-page .channel-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+}
+
+.documents-page .channel-content {
+  min-height: 400px;
+}
+
+.documents-page .channel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.documents-page .empty-state {
+  min-height: 400px;
+}
+
+/* 右键菜单样式 */
+
+.ant-dropdown-menu-item {
+  padding: 8px 16px;
+}
+
+.ant-dropdown-menu-item-danger {
+  color: #ff4d4f;
+}

@@ -34,6 +34,26 @@ export interface CreateChannelRequest {
   description?: string;
   type: 'public' | 'private' | 'direct';
   member_ids?: string[];
+  parent_id?: string;  // 父频道ID，用于创建子频道
+}
+
+export interface ChannelNode {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  path: string;
+  depth: number;
+  type: 'public' | 'private' | 'direct';
+  description: string;
+  doc_count: number;
+  child_count: number;
+  children: ChannelNode[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChannelTreeResponse {
+  channels: ChannelNode[];
 }
 
 export interface UpdateChannelRequest {
@@ -50,6 +70,11 @@ export interface ListChannelsParams {
 }
 
 export const channelApi = {
+  // 获取频道树形结构
+  getTree: (): Promise<any> => {
+    return request.get('/channels/tree');
+  },
+
   // 获取频道列表（支持筛选）
   list: (params: ListChannelsParams = {}): Promise<any> => {
     const { page = 1, pageSize = 20, type, keyword } = params;
