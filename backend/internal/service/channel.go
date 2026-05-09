@@ -42,9 +42,10 @@ func NewChannelService() *ChannelService {
 
 // CreateChannelRequest 创建频道请求
 type CreateChannelRequest struct {
-	Name        string `json:"name" validate:"required,min=2,max=100"`
-	Type        string `json:"type" validate:"required,oneof=public private dm"`
-	Description string `json:"description" validate:"max=500"`
+	Name        string  `json:"name" validate:"required,min=2,max=100"`
+	Type        string  `json:"type" validate:"required,oneof=public private dm"`
+	Description string  `json:"description" validate:"max=500"`
+	ParentID    *string `json:"parent_id"` // 父频道ID，可选，用于创建子频道
 }
 
 // UpdateChannelRequest 更新频道请求
@@ -233,11 +234,23 @@ func (s *ChannelService) Create(ctx context.Context, req *CreateChannelRequest, 
 		return nil, ErrInvalidChannelType
 	}
 
-	// 创建频道
+	// 如果指定了父频道，验证父频道是否存在
+	if req.ParentID != nil && *req.ParentID != "" {
+		_, err := s.repo.GetByID(ctx, *req.ParentID)
+		if err != nil {
+			if errors.Is(err, repository.ErrChannelNotFound) {
+				return nil, ErrChannelNotFound
+			}
+			return nil, err
+		}
+	}
+
+	// 创建频道（包含 ParentID）
 	ch := &model.Channel{
 		Name:        req.Name,
 		Type:        chType,
 		Description: req.Description,
+		ParentID:    req.ParentID,
 		CreatedBy:   createdBy,
 	}
 
@@ -257,10 +270,18 @@ func (s *ChannelService) Create(ctx context.Context, req *CreateChannelRequest, 
 		// 继续，不中断流程
 	}
 
+	// 如果是子频道，更新父频道的子频道数量
+	if req.ParentID != nil && *req.ParentID != "" {
+		if err := s.repo.UpdateChildCount(ctx, *req.ParentID, 1); err != nil {
+			logger.Warn("更新父频道子频道数量失败", "error", err, "parent_id", *req.ParentID)
+		}
+	}
+
 	logger.Info("频道创建成功",
 		"id", ch.ID,
 		"name", ch.Name,
 		"type", ch.Type,
+		"parent_id", req.ParentID,
 	)
 
 	return s.toChannelResponse(ctx, ch), nil
