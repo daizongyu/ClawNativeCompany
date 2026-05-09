@@ -3,7 +3,6 @@ import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
-  MessageOutlined,
   FileTextOutlined,
   CheckSquareOutlined,
   NodeIndexOutlined,
@@ -28,12 +27,6 @@ const Sidebar: React.FC = () => {
       icon: <TeamOutlined />,
       label: '员工管理',
       'data-testid': 'nav-employees',
-    },
-    {
-      key: '/channels',
-      icon: <MessageOutlined />,
-      label: '频道',
-      'data-testid': 'nav-channels',
     },
     {
       key: '/documents',

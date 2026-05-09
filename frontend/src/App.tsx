@@ -7,8 +7,6 @@ import MainLayout from './components/layout/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Employees from './pages/Employees';
-import Channels from './pages/Channels';
-import ChannelChat from './pages/ChannelChat';
 import Documents from './pages/Documents';
 import Tasks from './pages/Tasks';
 import Workflows from './pages/Workflows/index';
@@ -76,22 +74,6 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <LayoutRoute element={<Employees />} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/channels"
-              element={
-                <ProtectedRoute>
-                  <LayoutRoute element={<Channels />} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/channels/:id"
-              element={
-                <ProtectedRoute>
-                  <ChannelChat />
                 </ProtectedRoute>
               }
             />
