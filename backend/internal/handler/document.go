@@ -26,9 +26,9 @@ func NewDocumentHandler() *DocumentHandler {
 }
 
 // Create 创建文档
-// POST /api/v1/channels/:channel_id/documents
+// POST /api/v1/documents?channel_id=xxx
 func (h *DocumentHandler) Create(c *gin.Context) {
-	channelID := c.Param("channel_id")
+	channelID := c.Query("channel_id")
 	if channelID == "" {
 		utils.ValidationError(c, "频道ID不能为空")
 		return
@@ -206,9 +206,9 @@ func (h *DocumentHandler) Delete(c *gin.Context) {
 }
 
 // ListByChannel 获取频道文档列表
-// GET /api/v1/channels/:channel_id/documents
+// GET /api/v1/documents?channel_id=xxx
 func (h *DocumentHandler) ListByChannel(c *gin.Context) {
-	channelID := c.Param("channel_id")
+	channelID := c.Query("channel_id")
 	if channelID == "" {
 		utils.ValidationError(c, "频道ID不能为空")
 		return
@@ -340,22 +340,20 @@ func (h *DocumentHandler) RestoreVersion(c *gin.Context) {
 }
 
 // RegisterRoutes 注册路由
+// 注意：路由顺序很重要，具体路径必须在通配符路径之前注册
 func (h *DocumentHandler) RegisterRoutes(r *gin.RouterGroup) {
-	documents := r.Group("/documents")
-	{
-		documents.GET("/:id", h.Get)
-		documents.PUT("/:id", h.Update)
-		documents.PUT("/:id/content", h.SaveContent)
-		documents.DELETE("/:id", h.Delete)
-		documents.GET("/:id/versions", h.GetVersions)
-		documents.GET("/:id/versions/:version", h.GetVersion)
-		documents.POST("/:id/versions/:version/restore", h.RestoreVersion)
-	}
+	// 频道文档列表和创建（使用查询参数，必须在 /:id 之前）
+	r.GET("/documents", h.ListByChannel)
+	r.POST("/documents", h.Create)
 
-	// 频道下的文档路由
-	channels := r.Group("/channels")
-	{
-		channels.GET("/:channel_id/documents", h.ListByChannel)
-		channels.POST("/:channel_id/documents", h.Create)
-	}
+	// 版本相关路由（必须在 /:id 之前）
+	r.GET("/documents/:id/versions", h.GetVersions)
+	r.GET("/documents/:id/versions/:version", h.GetVersion)
+	r.POST("/documents/:id/versions/:version/restore", h.RestoreVersion)
+	r.PUT("/documents/:id/content", h.SaveContent)
+
+	// 基础 CRUD（最后注册）
+	r.GET("/documents/:id", h.Get)
+	r.PUT("/documents/:id", h.Update)
+	r.DELETE("/documents/:id", h.Delete)
 }

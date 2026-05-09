@@ -133,6 +133,9 @@ func main() {
 			// 频道管理路由
 			channelHandler.RegisterRoutes(protected)
 
+			// 文档管理路由
+			documentHandler.RegisterRoutes(protected)
+
 			// 消息路由
 			messageHandler.RegisterRoutes(protected)
 
@@ -144,9 +147,6 @@ func main() {
 
 			// Gateway 配置路由
 			gatewayConfigHandler.RegisterRoutes(protected)
-
-			// 文档管理路由
-			documentHandler.RegisterRoutes(protected)
 
 			// Dashboard 路由
 			protected.GET("/dashboard/stats", dashboardHandler.GetStats)

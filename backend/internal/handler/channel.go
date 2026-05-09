@@ -490,22 +490,25 @@ func (h *ChannelHandler) GetDetail(c *gin.Context) {
 }
 
 // RegisterRoutes 注册路由
+// 注意：路由顺序很重要，具体路径必须在通配符路径之前注册
 func (h *ChannelHandler) RegisterRoutes(r *gin.RouterGroup) {
-	channels := r.Group("/channels")
-	{
-		channels.POST("", h.Create)
-		channels.GET("", h.List)
-		channels.GET("/tree", h.GetTree)
-		channels.GET("/my", h.ListMyChannels)
-		channels.GET("/:id", h.Get)
-		channels.GET("/:id/detail", h.GetDetail)
-		channels.PUT("/:id", h.Update)
-		channels.DELETE("/:id", h.Delete)
-		channels.POST("/:id/children", h.CreateChild)
-		channels.GET("/:id/members", h.ListMembers)
-		channels.POST("/:id/members", h.AddMember)
-		channels.DELETE("/:id/members/:employee_id", h.RemoveMember)
-		channels.PUT("/:id/members/:employee_id/role", h.UpdateMemberRole)
-		channels.GET("/:id/my-role", h.GetMyRole)
-	}
+	// 1. 首先注册 /channels/tree 和 /channels/my（避免被 /:id 捕获）
+	r.GET("/channels/tree", h.GetTree)
+	r.GET("/channels/my", h.ListMyChannels)
+
+	// 2. 注册频道子资源路由
+	r.GET("/channels/:id/detail", h.GetDetail)
+	r.POST("/channels/:id/children", h.CreateChild)
+	r.GET("/channels/:id/members", h.ListMembers)
+	r.POST("/channels/:id/members", h.AddMember)
+	r.DELETE("/channels/:id/members/:employee_id", h.RemoveMember)
+	r.PUT("/channels/:id/members/:employee_id/role", h.UpdateMemberRole)
+	r.GET("/channels/:id/my-role", h.GetMyRole)
+
+	// 3. 最后注册基础 CRUD
+	r.POST("/channels", h.Create)
+	r.GET("/channels", h.List)
+	r.GET("/channels/:id", h.Get)
+	r.PUT("/channels/:id", h.Update)
+	r.DELETE("/channels/:id", h.Delete)
 }

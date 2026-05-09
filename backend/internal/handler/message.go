@@ -334,9 +334,7 @@ func (h *MessageHandler) RegisterRoutes(r *gin.RouterGroup) {
 	}
 
 	// 频道消息路由
-	channels := r.Group("/channels")
-	{
-		channels.GET("/:id/messages", h.List)
-		channels.GET("/:id/messages/search", h.Search)
-	}
+	// 频道消息路由（避免使用 Group，确保路由顺序正确）
+	r.GET("/channels/:id/messages", h.List)
+	r.GET("/channels/:id/messages/search", h.Search)
 }
