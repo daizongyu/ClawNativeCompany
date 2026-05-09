@@ -1,0 +1,91 @@
+/* DocumentEditorPanel.css - 文档编辑器样式 */
+
+.document-editor-panel {
+  position: fixed;
+  right: -50%;
+  top: 0;
+  width: 50%;
+  height: 100vh;
+  background: #fff;
+  border-left: 1px solid #e8e8e8;
+  transition: right 0.3s ease;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.document-editor-panel.visible {
+  right: 0;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fafafa;
+  border-bottom: 1px solid #e8e8e8;
+  min-height: 56px;
+}
+
+.editor-title {
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+}
+
+.vditor-container {
+  flex: 1;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* vditor 样式覆盖 */
+.vditor {
+  border: none !important;
+}
+
+.vditor-toolbar {
+  border-bottom: 1px solid #e8e8e8 !important;
+  padding: 8px 0 !important;
+}
+
+.vditor-wysiwyg {
+  padding: 16px !important;
+}
+
+.editor-status-bar {
+  display: flex;
+  gap: 24px;
+  padding: 8px 16px;
+  background: #f5f5f5;
+  font-size: 12px;
+  color: #999;
+  border-top: 1px solid #e8e8e8;
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+  .document-editor-panel {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor-toolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .editor-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -3,8 +3,14 @@ import { Layout, Card, Empty, Button, Space, message, Modal } from 'antd';
 import { FileTextOutlined, FolderOutlined, FolderAddOutlined } from '@ant-design/icons';
 import { useDocumentStore } from '../../stores/documentStore';
 import { channelApi, ChannelNode } from '../../services/channel';
+import { documentApi } from '../../services/document';
 import { ChannelTree } from '../../components/documents/ChannelTree';
 import { CreateChannelModal } from '../../components/documents/CreateChannelModal';
+import { DocumentList } from '../../components/documents/DocumentList';
+import { CreateDocumentModal } from '../../components/documents/CreateDocumentModal';
+import { DocumentEditorPanel } from '../../components/documents/DocumentEditorPanel';
+import '../../components/documents/ChannelTree.css';
+import '../../components/documents/DocumentEditorPanel.css';
 
 const { Sider, Content } = Layout;
 
@@ -22,6 +28,7 @@ function findChannelNode(channels: ChannelNode[], id: string): ChannelNode | nul
 
 const DocumentsPage: React.FC = () => {
   const {
+    // 频道树
     channels,
     selectedChannelId,
     selectedChannel,
@@ -35,6 +42,35 @@ const DocumentsPage: React.FC = () => {
     setChannelLoading,
     openCreateChannelModal,
     closeCreateChannelModal,
+    
+    // 文档列表
+    documents,
+    documentLoading,
+    documentPagination,
+    searchKeyword,
+    setDocuments,
+    setDocumentLoading,
+    setDocumentPagination,
+    setSearchKeyword,
+    
+    // 编辑器
+    editorVisible,
+    editingDocumentId,
+    editingDocumentTitle,
+    openEditor,
+    closeEditor,
+    
+    // 创建文档弹窗
+    createDocumentModalVisible,
+    openCreateDocumentModal,
+    closeCreateDocumentModal,
+    
+    // 历史弹窗（Phase 4 实现）
+    // historyModalVisible,
+    // historyDocumentId,
+    // historyDocumentTitle,
+    openHistoryModal,
+    // closeHistoryModal,
   } = useDocumentStore();
 
   // 加载频道树
@@ -54,26 +90,69 @@ const DocumentsPage: React.FC = () => {
     }
   }, [setChannels, setChannelLoading]);
 
+  // 加载文档列表
+  const loadDocuments = useCallback(async (channelId: string, keyword?: string) => {
+    setDocumentLoading(true);
+    try {
+      const res = await documentApi.listByChannel(channelId, {
+        keyword,
+        page: documentPagination.current,
+        page_size: documentPagination.pageSize,
+      });
+      if (res.code === 0) {
+        setDocuments(res.data.list || []);
+        setDocumentPagination({
+          current: res.data.page,
+          pageSize: res.data.page_size,
+          total: res.data.total,
+        });
+      } else {
+        message.error(res.message || '加载文档失败');
+      }
+    } catch (error) {
+      message.error('加载文档失败');
+    } finally {
+      setDocumentLoading(false);
+    }
+  }, [documentPagination.current, documentPagination.pageSize, setDocuments, setDocumentLoading, setDocumentPagination]);
+
   // 初始化加载频道树
   useEffect(() => {
     loadChannelTree();
   }, [loadChannelTree]);
 
-  // 选择频道时更新详情
+  // 选择频道时加载文档列表
   useEffect(() => {
     if (selectedChannelId) {
       const channel = findChannelNode(channels, selectedChannelId);
       setSelectedChannel(channel);
+      loadDocuments(selectedChannelId, searchKeyword);
     } else {
       setSelectedChannel(null);
+      setDocuments([]);
     }
-  }, [selectedChannelId, channels, setSelectedChannel]);
+  }, [selectedChannelId, channels, searchKeyword, loadDocuments, setSelectedChannel, setDocuments]);
+
+  // 搜索时重新加载
+  const handleSearch = useCallback((keyword: string) => {
+    setSearchKeyword(keyword);
+    if (selectedChannelId) {
+      loadDocuments(selectedChannelId, keyword);
+    }
+  }, [selectedChannelId, loadDocuments, setSearchKeyword]);
+
+  // 分页变化
+  const handlePageChange = useCallback((page: number, pageSize: number) => {
+    setDocumentPagination({ current: page, pageSize, total: documentPagination.total });
+    if (selectedChannelId) {
+      loadDocuments(selectedChannelId, searchKeyword);
+    }
+  }, [selectedChannelId, searchKeyword, documentPagination.total, loadDocuments, setDocumentPagination]);
 
   // 创建频道成功
   const handleCreateChannelSuccess = useCallback((newChannelId: string) => {
     closeCreateChannelModal();
     loadChannelTree();
-    // 创建成功后自动选择新频道
     selectChannel(newChannelId);
   }, [closeCreateChannelModal, loadChannelTree, selectChannel]);
 
@@ -118,6 +197,55 @@ const DocumentsPage: React.FC = () => {
   const handleCreateRootChannel = useCallback(() => {
     openCreateChannelModal();
   }, [openCreateChannelModal]);
+
+  // 创建文档成功
+  const handleCreateDocumentSuccess = useCallback((docId: string, title: string) => {
+    closeCreateDocumentModal();
+    loadDocuments(selectedChannelId!, searchKeyword);
+    // 创建成功后自动打开编辑器
+    openEditor(docId, title);
+  }, [closeCreateDocumentModal, loadDocuments, selectedChannelId, searchKeyword, openEditor]);
+
+  // 编辑文档
+  const handleEditDocument = useCallback((docId: string, title: string) => {
+    openEditor(docId, title);
+  }, [openEditor]);
+
+  // 删除文档
+  const handleDeleteDocument = useCallback((docId: string) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: '删除文档将同时删除其所有版本历史，是否继续？',
+      okText: '确认删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const res = await documentApi.delete(docId);
+          if (res.code === 0) {
+            message.success('文档删除成功');
+            loadDocuments(selectedChannelId!, searchKeyword);
+          } else {
+            message.error(res.message || '删除失败');
+          }
+        } catch (error) {
+          message.error('删除失败');
+        }
+      },
+    });
+  }, [loadDocuments, selectedChannelId, searchKeyword]);
+
+  // 查看历史版本
+  const handleViewHistory = useCallback((docId: string, title: string) => {
+    openHistoryModal(docId, title);
+  }, [openHistoryModal]);
+
+  // 保存成功后刷新
+  const handleSaveSuccess = useCallback(() => {
+    if (selectedChannelId) {
+      loadDocuments(selectedChannelId, searchKeyword);
+    }
+  }, [loadDocuments, selectedChannelId, searchKeyword]);
 
   return (
     <Layout className="documents-page" style={{ height: 'calc(100vh - 64px)', background: '#f5f5f5' }}>
@@ -171,28 +299,21 @@ const DocumentsPage: React.FC = () => {
               )}
             </Card>
 
-            {/* 文档列表占位 */}
+            {/* 文档列表 */}
             <Card>
-              <Empty
-                description="Phase 3 将实现文档列表和编辑器"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              >
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<FileTextOutlined />}
-                    data-testid="create-document-btn-placeholder"
-                  >
-                    创建文档 (Phase 3)
-                  </Button>
-                  <Button
-                    icon={<FolderAddOutlined />}
-                    onClick={() => handleCreateChild(selectedChannel.id, selectedChannel.name)}
-                  >
-                    创建子频道
-                  </Button>
-                </Space>
-              </Empty>
+              <DocumentList
+                channelId={selectedChannelId}
+                documents={documents}
+                loading={documentLoading}
+                pagination={documentPagination}
+                onPageChange={handlePageChange}
+                onCreateDocument={openCreateDocumentModal}
+                onEditDocument={handleEditDocument}
+                onDeleteDocument={handleDeleteDocument}
+                onViewHistory={handleViewHistory}
+                onSearch={handleSearch}
+                searchKeyword={searchKeyword}
+              />
             </Card>
           </div>
         ) : (
@@ -221,6 +342,25 @@ const DocumentsPage: React.FC = () => {
         parentName={createChannelParentName}
         onCancel={closeCreateChannelModal}
         onSuccess={handleCreateChannelSuccess}
+      />
+
+      {/* 创建文档弹窗 */}
+      <CreateDocumentModal
+        visible={createDocumentModalVisible}
+        channelId={selectedChannelId || ''}
+        channelName={selectedChannel?.name || ''}
+        onCancel={closeCreateDocumentModal}
+        onSuccess={handleCreateDocumentSuccess}
+      />
+
+      {/* 文档编辑器面板 */}
+      <DocumentEditorPanel
+        visible={editorVisible}
+        documentId={editingDocumentId}
+        documentTitle={editingDocumentTitle}
+        onClose={closeEditor}
+        onSaveSuccess={handleSaveSuccess}
+        onOpenHistory={() => handleViewHistory(editingDocumentId!, editingDocumentTitle)}
       />
     </Layout>
   );
