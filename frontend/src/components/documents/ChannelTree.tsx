@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Tree, Input, Button, Empty, Spin } from 'antd';
 import { FolderOutlined, FolderAddOutlined } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
@@ -17,19 +17,14 @@ interface ChannelTreeProps {
   loading?: boolean;
 }
 
-// 将后端返回的频道树数据转换为 Ant Design Tree 格式
-function renderTreeData(
-  channels: ChannelNode[],
-  onEdit: (id: string) => void,
-  onDelete: (id: string) => void,
-  onCreateChild: (parentId: string, parentName: string) => void
-): DataNode[] {
+// 将后端返回的频道树数据转换为 Ant Design Tree 格式（纯函数，不修改原数据）
+function renderTreeData(channels: ChannelNode[]): DataNode[] {
   return channels.map((ch) => ({
     key: ch.id,
     title: ch.name,
     icon: <FolderOutlined />,
     children: ch.children?.length > 0
-      ? renderTreeData(ch.children, onEdit, onDelete, onCreateChild)
+      ? renderTreeData(ch.children)
       : undefined,
     // 扩展字段用于 titleRender
     doc_count: ch.doc_count,
@@ -37,25 +32,33 @@ function renderTreeData(
   } as DataNode & { doc_count: number; child_count: number }));
 }
 
-// 搜索过滤（递归）
+// 搜索过滤（递归，返回新数组不修改原数据）
 function filterChannels(channels: ChannelNode[], keyword: string): ChannelNode[] {
   if (!keyword) return channels;
 
-  return channels.filter((ch) => {
+  const lowerKeyword = keyword.toLowerCase();
+  
+  return channels.reduce<ChannelNode[]>((acc, ch) => {
     // 名称匹配
-    if (ch.name.toLowerCase().includes(keyword.toLowerCase())) {
-      return true;
+    if (ch.name.toLowerCase().includes(lowerKeyword)) {
+      acc.push({
+        ...ch,
+        children: ch.children ? filterChannels(ch.children, '') : [],
+      });
+      return acc;
     }
     // 子频道匹配
     if (ch.children?.length > 0) {
       const filteredChildren = filterChannels(ch.children, keyword);
       if (filteredChildren.length > 0) {
-        ch.children = filteredChildren;
-        return true;
+        acc.push({
+          ...ch,
+          children: filteredChildren,
+        });
       }
     }
-    return false;
-  });
+    return acc;
+  }, []);
 }
 
 export const ChannelTree: React.FC<ChannelTreeProps> = ({
@@ -71,11 +74,14 @@ export const ChannelTree: React.FC<ChannelTreeProps> = ({
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [searchKeyword, setSearchKeyword] = useState('');
 
-  // 搜索过滤后的频道
-  const filteredChannels = filterChannels([...channels], searchKeyword);
+  // 搜索过滤后的频道（使用 useMemo 缓存）
+  const filteredChannels = useMemo(
+    () => filterChannels(channels, searchKeyword),
+    [channels, searchKeyword]
+  );
 
   // 自动展开所有匹配的节点
-  const autoExpandKeys = React.useMemo(() => {
+  const autoExpandKeys = useMemo(() => {
     if (!searchKeyword) return expandedKeys;
     const keys: string[] = [];
     const collectKeys = (nodes: ChannelNode[]) => {
@@ -88,19 +94,24 @@ export const ChannelTree: React.FC<ChannelTreeProps> = ({
     };
     collectKeys(filteredChannels);
     return keys;
-  }, [searchKeyword, filteredChannels]);
+  }, [searchKeyword, expandedKeys, filteredChannels]);
 
-  // 处理展开事件
-  const handleExpand = (keys: React.Key[]) => {
+  // 处理展开事件（使用 useCallback 缓存）
+  const handleExpand = useCallback((keys: React.Key[]) => {
     setExpandedKeys(keys as string[]);
-  };
+  }, []);
 
-  // 转换为 Tree 数据格式
-  const treeData = renderTreeData(
-    filteredChannels,
-    onEditChannel,
-    onDeleteChannel,
-    onCreateChild
+  // 处理选择事件
+  const handleSelect = useCallback((keys: React.Key[]) => {
+    if (keys.length > 0) {
+      onSelect(keys[0] as string);
+    }
+  }, [onSelect]);
+
+  // 转换为 Tree 数据格式（使用 useMemo 缓存）
+  const treeData = useMemo(
+    () => renderTreeData(filteredChannels),
+    [filteredChannels]
   );
 
   if (loading) {
@@ -150,11 +161,7 @@ export const ChannelTree: React.FC<ChannelTreeProps> = ({
         expandedKeys={searchKeyword ? autoExpandKeys : expandedKeys}
         onExpand={handleExpand}
         selectedKeys={selectedId ? [selectedId] : []}
-        onSelect={(keys) => {
-          if (keys.length > 0) {
-            onSelect(keys[0] as string);
-          }
-        }}
+        onSelect={(keys) => handleSelect(keys)}
         treeData={treeData}
         titleRender={(node: any) => (
           <ChannelTreeNodeTitle

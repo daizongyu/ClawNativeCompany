@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Table, Button, Input, Empty, Space, Tag, Tooltip, Spin } from 'antd';
 import { FileTextOutlined, FileAddOutlined, EditOutlined, HistoryOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -50,13 +50,21 @@ function formatTime(time: string): string {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
-// 表格列定义
-function getColumns(
-  onEdit: (id: string, title: string) => void,
-  onDelete: (id: string) => void,
-  onViewHistory: (id: string, title: string) => void
-): ColumnsType<Document> {
-  return [
+export const DocumentList: React.FC<DocumentListProps> = ({
+  channelId,
+  documents,
+  loading,
+  pagination,
+  onPageChange,
+  onCreateDocument,
+  onEditDocument,
+  onDeleteDocument,
+  onViewHistory,
+  onSearch,
+  searchKeyword,
+}) => {
+  // 使用 useMemo 缓存表格列配置
+  const columns: ColumnsType<Document> = useMemo(() => [
     {
       title: '标题',
       dataIndex: 'title',
@@ -69,7 +77,7 @@ function getColumns(
             className="document-title" 
             data-testid={`doc-title-${record.id}`}
             style={{ cursor: 'pointer' }}
-            onClick={() => onEdit(record.id, title)}
+            onClick={() => onEditDocument(record.id, title)}
           >
             {title}
           </span>
@@ -122,7 +130,7 @@ function getColumns(
               type="text"
               size="small"
               icon={<EditOutlined />}
-              onClick={() => onEdit(record.id, record.title)}
+              onClick={() => onEditDocument(record.id, record.title)}
               data-testid={`doc-edit-btn-${record.id}`}
               data-action="edit-document"
             />
@@ -143,7 +151,7 @@ function getColumns(
               size="small"
               danger
               icon={<DeleteOutlined />}
-              onClick={() => onDelete(record.id)}
+              onClick={() => onDeleteDocument(record.id)}
               data-testid={`doc-delete-btn-${record.id}`}
               data-action="delete-document"
             />
@@ -151,22 +159,13 @@ function getColumns(
         </Space>
       ),
     },
-  ];
-}
+  ], [onEditDocument, onDeleteDocument, onViewHistory]);
 
-export const DocumentList: React.FC<DocumentListProps> = ({
-  channelId,
-  documents,
-  loading,
-  pagination,
-  onPageChange,
-  onCreateDocument,
-  onEditDocument,
-  onDeleteDocument,
-  onViewHistory,
-  onSearch,
-  searchKeyword,
-}) => {
+  // 行点击回调
+  const handleRowClick = useCallback((record: Document) => {
+    onEditDocument(record.id, record.title);
+  }, [onEditDocument]);
+
   // 未选择频道时显示提示
   if (!channelId) {
     return (
@@ -243,7 +242,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
         <Table
           dataSource={documents}
           rowKey="id"
-          columns={getColumns(onEditDocument, onDeleteDocument, onViewHistory)}
+          columns={columns}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
@@ -255,7 +254,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
           data-testid="document-table"
           data-entity="document"
           onRow={(record) => ({
-            onClick: () => onEditDocument(record.id, record.title),
+            onClick: () => handleRowClick(record),
             style: { cursor: 'pointer' },
           })}
         />
