@@ -27,8 +27,8 @@
   background: #fafafa;
   border-bottom: 1px solid #e8e8e8;
   min-height: 56px;
-  z-index: 1;
-  position: relative;
+  /* 不创建层叠上下文，让tooltip能正常显示 */
+  z-index: auto;
 }
 
 .editor-title {
@@ -60,8 +60,8 @@
   padding: 8px 24px !important;
   padding-left: 24px !important;
   padding-right: 24px !important;
-  position: relative;
-  z-index: 10;
+  position: relative !important;
+  z-index: 100 !important;
   box-sizing: border-box !important;
 }
 
@@ -72,14 +72,13 @@
 
 /* vditor toolbar button tooltip 不被遮挡 */
 .vditor-toolbar__item {
-  position: relative;
-  z-index: 20;
+  position: static;
 }
 
-/* vditor tooltip伪元素不被遮挡 */
+/* vditor tooltip伪元素不被遮挡 - 使用更高的z-index */
 .vditor-tooltipped::after,
 .vditor-tooltipped::before {
-  z-index: 999 !important;
+  z-index: 9999 !important;
 }
 
 /* 编辑区域：去掉vditor默认的居中限制 */
