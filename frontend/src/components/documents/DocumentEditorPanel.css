@@ -23,10 +23,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 24px;
   background: #fafafa;
   border-bottom: 1px solid #e8e8e8;
   min-height: 56px;
+  z-index: 1;
 }
 
 .editor-title {
@@ -52,19 +53,45 @@
   border: none !important;
 }
 
+/* 工具栏tooltip不被遮挡 */
 .vditor-toolbar {
   border-bottom: 1px solid #e8e8e8 !important;
-  padding: 8px 0 !important;
+  padding: 8px 24px !important;
+  position: relative;
+  z-index: 10;
 }
 
+/* vditor tooltip 样式修复 */
+.vditor-panel {
+  z-index: 100 !important;
+}
+
+/* 编辑区域：去掉居中限制，让内容填满宽度 */
 .vditor-wysiwyg {
-  padding: 16px !important;
+  padding: 24px !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+
+.vditor-wysiwyg pre,
+.vditor-wysiwyg .vditor-wysiwyg__block {
+  margin: 0 !important;
+}
+
+/* 源码模式同样处理 */
+.vditor-ir {
+  padding: 24px !important;
+  max-width: 100% !important;
+}
+
+.vditor-sv {
+  padding: 24px !important;
 }
 
 .editor-status-bar {
   display: flex;
   gap: 24px;
-  padding: 8px 16px;
+  padding: 8px 24px;
   background: #f5f5f5;
   font-size: 12px;
   color: #999;
@@ -76,10 +103,21 @@
   .editor-toolbar {
     flex-direction: column;
     gap: 8px;
+    padding: 12px 16px;
   }
   
   .editor-actions {
     width: 100%;
     justify-content: flex-end;
+  }
+  
+  .vditor-toolbar {
+    padding: 8px 16px !important;
+  }
+  
+  .vditor-wysiwyg,
+  .vditor-ir,
+  .vditor-sv {
+    padding: 16px !important;
   }
 }
