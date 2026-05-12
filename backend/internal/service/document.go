@@ -42,7 +42,7 @@ func NewDocumentService() *DocumentService {
 // CreateDocumentRequest 创建文档请求
 type CreateDocumentRequest struct {
 	Title    string `json:"title" validate:"required,min=1,max=200"`
-	Content  string `json:"content" validate:"required"`
+	Content  string `json:"content"`  // 创建时可为空，编辑时填写
 	AuthorID string `json:"author_id"`
 }
 
