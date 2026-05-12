@@ -66,11 +66,26 @@
   z-index: 100 !important;
 }
 
+/* vditor toolbar button tooltip 不被遮挡 */
+.vditor-toolbar__item {
+  position: relative;
+}
+
 /* 编辑区域：去掉居中限制，让内容填满宽度 */
 .vditor-wysiwyg {
-  padding: 24px !important;
+  padding: 24px 32px !important;
   max-width: 100% !important;
   margin: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 覆盖vditor默认的内容区域宽度限制 */
+.vditor-wysiwyg .vditor-wysiwyg__editor {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .vditor-wysiwyg pre,
@@ -80,12 +95,20 @@
 
 /* 源码模式同样处理 */
 .vditor-ir {
-  padding: 24px !important;
+  padding: 24px 32px !important;
   max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 .vditor-sv {
-  padding: 24px !important;
+  padding: 24px 32px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.vditor-sv textarea {
+  max-width: 100% !important;
 }
 
 .editor-status-bar {
