@@ -81,6 +81,30 @@
   z-index: 9999 !important;
 }
 
+/* vditor tooltip改为向下显示（南方），避免被上方editor-toolbar遮挡 */
+/* 覆盖vditor-tooltipped__ne的默认向上显示样式 */
+.vditor-toolbar .vditor-tooltipped__ne::after,
+.vditor-toolbar .vditor-tooltipped__nw::after {
+  top: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-top: 36px !important;
+}
+
+.vditor-toolbar .vditor-tooltipped__ne::before,
+.vditor-toolbar .vditor-tooltipped__nw::before {
+  top: auto !important;
+  bottom: auto !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin-top: 28px !important;
+  border-top: 6px solid #4b4b4b !important;
+  border-bottom: none !important;
+  border-left: 6px solid transparent !important;
+  border-right: 6px solid transparent !important;
+}
+
 /* 编辑区域：去掉vditor默认的居中限制 */
 .vditor-wysiwyg {
   padding: 24px 32px !important;
