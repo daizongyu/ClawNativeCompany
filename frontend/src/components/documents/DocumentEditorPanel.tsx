@@ -3,6 +3,7 @@ import { Button, Space, Tag, Spin, Modal, message } from 'antd';
 import { FileTextOutlined, HistoryOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
+import './DocumentEditorPanel.css';  // 在vditor CSS之后导入，确保样式覆盖生效
 import { documentApi } from '../../services/document';
 
 interface DocumentEditorPanelProps {
@@ -143,6 +144,38 @@ export const DocumentEditorPanel: React.FC<DocumentEditorPanelProps> = ({
         if (toolbar) {
           toolbar.style.paddingLeft = '';
           toolbar.style.paddingRight = '';
+        }
+        
+        // 动态添加tooltip样式覆盖（优先级高于vditor默认样式）
+        const styleId = 'vditor-tooltip-override';
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.textContent = `
+            .vditor-toolbar .vditor-tooltipped__ne::after,
+            .vditor-toolbar .vditor-tooltipped__nw::after,
+            .vditor-toolbar .vditor-tooltipped__n::after {
+              left: 100% !important;
+              top: 50% !important;
+              transform: translateY(-50%) !important;
+              margin-left: 8px !important;
+              margin-top: 0 !important;
+            }
+            .vditor-toolbar .vditor-tooltipped__ne::before,
+            .vditor-toolbar .vditor-tooltipped__nw::before,
+            .vditor-toolbar .vditor-tooltipped__n::before {
+              left: 100% !important;
+              top: 50% !important;
+              transform: translateY(-50%) !important;
+              margin-left: 2px !important;
+              margin-top: 0 !important;
+              border-right: 6px solid #4b4b4b !important;
+              border-left: none !important;
+              border-top: 6px solid transparent !important;
+              border-bottom: 6px solid transparent !important;
+            }
+          `;
+          document.head.appendChild(style);
         }
       },
       
