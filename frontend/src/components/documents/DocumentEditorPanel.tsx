@@ -135,9 +135,15 @@ export const DocumentEditorPanel: React.FC<DocumentEditorPanelProps> = ({
         setHasChanges(value !== content);
       },
       
-      // 初始化后设置内容
+      // 初始化后设置内容并修复工具栏样式
       after: () => {
         vditorRef.current?.setValue(content);
+        // 清除vditor自动设置的居中padding
+        const toolbar = document.querySelector('.vditor-toolbar') as HTMLElement;
+        if (toolbar) {
+          toolbar.style.paddingLeft = '';
+          toolbar.style.paddingRight = '';
+        }
       },
       
       // 缓存（自动保存）

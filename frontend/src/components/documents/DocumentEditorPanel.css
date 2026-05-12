@@ -28,6 +28,7 @@
   border-bottom: 1px solid #e8e8e8;
   min-height: 56px;
   z-index: 1;
+  position: relative;
 }
 
 .editor-title {
@@ -53,12 +54,15 @@
   border: none !important;
 }
 
-/* 工具栏tooltip不被遮挡 */
+/* 工具栏：覆盖vditor默认的居中padding */
 .vditor-toolbar {
   border-bottom: 1px solid #e8e8e8 !important;
   padding: 8px 24px !important;
+  padding-left: 24px !important;
+  padding-right: 24px !important;
   position: relative;
   z-index: 10;
+  box-sizing: border-box !important;
 }
 
 /* vditor tooltip 样式修复 */
@@ -69,11 +73,20 @@
 /* vditor toolbar button tooltip 不被遮挡 */
 .vditor-toolbar__item {
   position: relative;
+  z-index: 20;
 }
 
-/* 编辑区域：去掉居中限制，让内容填满宽度 */
+/* vditor tooltip伪元素不被遮挡 */
+.vditor-tooltipped::after,
+.vditor-tooltipped::before {
+  z-index: 999 !important;
+}
+
+/* 编辑区域：去掉vditor默认的居中限制 */
 .vditor-wysiwyg {
   padding: 24px 32px !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
   max-width: 100% !important;
   margin: 0 !important;
   width: 100% !important;
@@ -96,6 +109,8 @@
 /* 源码模式同样处理 */
 .vditor-ir {
   padding: 24px 32px !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
   max-width: 100% !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -103,12 +118,20 @@
 
 .vditor-sv {
   padding: 24px 32px !important;
+  padding-left: 32px !important;
+  padding-right: 32px !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
 .vditor-sv textarea {
   max-width: 100% !important;
+}
+
+/* vditor 内容编辑区域（WYSIWYG模式下的可编辑div） */
+.vditor-wysiwyg[contenteditable="true"] {
+  padding-left: 32px !important;
+  padding-right: 32px !important;
 }
 
 .editor-status-bar {
