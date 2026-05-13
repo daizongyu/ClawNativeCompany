@@ -22,6 +22,60 @@ function formatFileSize(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// 注入tooltip样式覆盖（解决CSS伪元素无法被CSS文件覆盖的问题）
+function injectTooltipStyles() {
+  const styleId = 'vditor-tooltip-override-styles';
+  if (document.getElementById(styleId)) return; // 已存在则不重复注入
+  
+  const style = document.createElement('style');
+  style.id = styleId;
+  style.textContent = `
+    /* Tooltip向右显示 */
+    .vditor-toolbar button.vditor-tooltipped::after {
+      position: absolute !important;
+      left: 100% !important;
+      top: 50% !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: translateY(-50%) !important;
+      margin-left: 12px !important;
+      margin-top: 0 !important;
+      margin-right: 0 !important;
+      margin-bottom: 0 !important;
+      /* 确保文字完整显示 */
+      white-space: nowrap !important;
+      height: auto !important;
+      min-height: 20px !important;
+      line-height: 20px !important;
+      padding: 6px 10px !important;
+      font-size: 13px !important;
+      max-width: 200px !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+    
+    /* Tooltip箭头紧贴tooltip左侧 */
+    .vditor-toolbar button.vditor-tooltipped::before {
+      position: absolute !important;
+      left: 100% !important;
+      top: 50% !important;
+      right: auto !important;
+      bottom: auto !important;
+      transform: translateY(-50%) !important;
+      margin-left: 6px !important;
+      margin-top: 0 !important;
+      margin-right: 0 !important;
+      margin-bottom: 0 !important;
+      /* 箭头指向按钮（左边） */
+      border-right: 7px solid #4b4b4b !important;
+      border-left: none !important;
+      border-top: 7px solid transparent !important;
+      border-bottom: 7px solid transparent !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export const DocumentEditorPanel: React.FC<DocumentEditorPanelProps> = ({
   visible,
   documentId,
@@ -146,37 +200,8 @@ export const DocumentEditorPanel: React.FC<DocumentEditorPanelProps> = ({
           toolbar.style.paddingRight = '';
         }
         
-        // 动态添加tooltip样式覆盖（优先级高于vditor默认样式）
-        const styleId = 'vditor-tooltip-override';
-        if (!document.getElementById(styleId)) {
-          const style = document.createElement('style');
-          style.id = styleId;
-          style.textContent = `
-            .vditor-toolbar .vditor-tooltipped__ne::after,
-            .vditor-toolbar .vditor-tooltipped__nw::after,
-            .vditor-toolbar .vditor-tooltipped__n::after {
-              left: 100% !important;
-              top: 50% !important;
-              transform: translateY(-50%) !important;
-              margin-left: 8px !important;
-              margin-top: 0 !important;
-            }
-            .vditor-toolbar .vditor-tooltipped__ne::before,
-            .vditor-toolbar .vditor-tooltipped__nw::before,
-            .vditor-toolbar .vditor-tooltipped__n::before {
-              left: 100% !important;
-              top: 50% !important;
-              transform: translateY(-50%) !important;
-              margin-left: 2px !important;
-              margin-top: 0 !important;
-              border-right: 6px solid #4b4b4b !important;
-              border-left: none !important;
-              border-top: 6px solid transparent !important;
-              border-bottom: 6px solid transparent !important;
-            }
-          `;
-          document.head.appendChild(style);
-        }
+        // 动态注入tooltip样式，确保覆盖vditor默认样式
+        injectTooltipStyles();
       },
       
       // 缓存（自动保存）

@@ -1,5 +1,6 @@
 /* DocumentEditorPanel.css - 文档编辑器样式 */
 
+/* 编辑器面板：全屏布局 */
 .document-editor-panel {
   position: fixed;
   right: -100%;
@@ -19,6 +20,7 @@
   right: 0;
 }
 
+/* 文档标题栏 */
 .editor-toolbar {
   display: flex;
   justify-content: space-between;
@@ -27,7 +29,6 @@
   background: #fafafa;
   border-bottom: 1px solid #e8e8e8;
   min-height: 56px;
-  /* 不创建层叠上下文，让tooltip能正常显示 */
   z-index: auto;
 }
 
@@ -43,134 +44,47 @@
   align-items: center;
 }
 
+/* vditor容器 */
 .vditor-container {
   flex: 1;
   overflow: hidden;
   background: #fff;
 }
 
-/* vditor 样式覆盖 */
+/* vditor基础样式 */
 .vditor {
   border: none !important;
+  height: 100% !important;
 }
 
-/* 工具栏：覆盖vditor默认的居中padding */
+/* vditor工具栏 */
 .vditor-toolbar {
   border-bottom: 1px solid #e8e8e8 !important;
-  padding: 8px 24px !important;
-  padding-left: 24px !important;
-  padding-right: 24px !important;
+  padding: 10px 24px !important;
   position: relative !important;
   z-index: 100 !important;
   box-sizing: border-box !important;
 }
 
-/* vditor tooltip 样式修复 */
-.vditor-panel {
-  z-index: 100 !important;
-}
-
-/* vditor toolbar button tooltip 不被遮挡 */
-.vditor-toolbar__item {
-  position: static;
-}
-
-/* vditor tooltip伪元素不被遮挡 - 使用更高的z-index */
-.vditor-tooltipped::after,
-.vditor-tooltipped::before {
-  z-index: 9999 !important;
-}
-
-/* vditor tooltip改为向右显示（东方），避免被上方遮挡 */
-/* 使用更强的选择器确保覆盖vditor默认样式 */
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__ne::after,
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__nw::after,
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__n::after {
-  /* tooltip框放在按钮右侧 */
-  left: 100% !important;
-  right: auto !important;
-  top: 50% !important;
-  bottom: auto !important;
-  margin-left: 8px !important;
-  margin-right: 0 !important;
-  margin-top: 0 !important;
-  transform: translateY(-50%) !important;
-}
-
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__ne::before,
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__nw::before,
-.document-editor-panel .vditor-container .vditor .vditor-toolbar .vditor-toolbar__item .vditor-tooltipped.vditor-tooltipped__n::before {
-  /* 箭头紧贴tooltip左侧边缘 */
-  left: 100% !important;
-  right: auto !important;
-  top: 50% !important;
-  bottom: auto !important;
-  margin-left: 2px !important;
-  margin-right: 0 !important;
-  margin-top: 0 !important;
-  transform: translateY(-50%) !important;
-  border-right: 6px solid #4b4b4b !important;
-  border-left: none !important;
-  border-top: 6px solid transparent !important;
-  border-bottom: 6px solid transparent !important;
-  border-top-width: 6px !important;
-  border-bottom-width: 6px !important;
-  border-left-width: 0 !important;
-  border-right-width: 6px !important;
-}
-
-/* 编辑区域：去掉vditor默认的居中限制 */
+/* vditor编辑区域 */
 .vditor-wysiwyg {
   padding: 24px 32px !important;
-  padding-left: 32px !important;
-  padding-right: 32px !important;
   max-width: 100% !important;
-  margin: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
-/* 覆盖vditor默认的内容区域宽度限制 */
-.vditor-wysiwyg .vditor-wysiwyg__editor {
-  max-width: 100% !important;
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-.vditor-wysiwyg pre,
-.vditor-wysiwyg .vditor-wysiwyg__block {
-  margin: 0 !important;
-}
-
-/* 源码模式同样处理 */
 .vditor-ir {
   padding: 24px 32px !important;
-  padding-left: 32px !important;
-  padding-right: 32px !important;
   max-width: 100% !important;
   width: 100% !important;
-  box-sizing: border-box !important;
 }
 
 .vditor-sv {
   padding: 24px 32px !important;
-  padding-left: 32px !important;
-  padding-right: 32px !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
 }
 
-.vditor-sv textarea {
-  max-width: 100% !important;
-}
-
-/* vditor 内容编辑区域（WYSIWYG模式下的可编辑div） */
-.vditor-wysiwyg[contenteditable="true"] {
-  padding-left: 32px !important;
-  padding-right: 32px !important;
-}
-
+/* 状态栏 */
 .editor-status-bar {
   display: flex;
   gap: 24px;
@@ -179,6 +93,60 @@
   font-size: 12px;
   color: #999;
   border-top: 1px solid #e8e8e8;
+}
+
+/* ========================================
+   Tooltip向右显示样式
+   ======================================== */
+
+/* tooltip不创建独立的层叠上下文 */
+.vditor-toolbar__item {
+  position: static !important;
+}
+
+/* tooltip伪元素z-index */
+.vditor-tooltipped::after,
+.vditor-tooltipped::before {
+  z-index: 9999 !important;
+}
+
+/* tooltip内容框 - 向右显示 */
+.vditor-toolbar .vditor-tooltipped::after {
+  /* 定位在按钮右侧 */
+  position: absolute !important;
+  left: 100% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  margin-left: 10px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  /* 确保内容完整显示 */
+  white-space: normal !important;
+  min-height: auto !important;
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
+}
+
+/* tooltip箭头 - 紧贴tooltip左侧 */
+.vditor-toolbar .vditor-tooltipped::before {
+  position: absolute !important;
+  left: 100% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  margin-left: 4px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  /* 箭头指向左边（按钮） */
+  border-right: 6px solid #4b4b4b !important;
+  border-left: none !important;
+  border-top: 6px solid transparent !important;
+  border-bottom: 6px solid transparent !important;
 }
 
 /* 响应式 */
