@@ -379,14 +379,16 @@ export const DocumentEditorPanel: React.FC<DocumentEditorPanelProps> = ({
       </div>
 
       {/* 编辑器容器 */}
-      <Spin spinning={loading}>
-        <div
-          ref={containerRef}
-          id={`vditor-${documentId || 'new'}`}
-          className="vditor-container"
-          data-testid="vditor-editor"
-        />
-      </Spin>
+      <div className="vditor-container-wrapper" style={{ flex: 1, overflow: 'hidden' }}>
+        <Spin spinning={loading}>
+          <div
+            ref={containerRef}
+            id={`vditor-${documentId || 'new'}`}
+            className="vditor-container"
+            data-testid="vditor-editor"
+          />
+        </Spin>
+      </div>
 
       {/* 底部状态栏 */}
       <div className="editor-status-bar">
